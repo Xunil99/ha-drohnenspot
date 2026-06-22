@@ -249,6 +249,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
                     "longitude": p["lon"],
                     "kind": p["kind"],
                     "name": p["name"],
+                    "subtype": p.get("subtype"),
+                    "wiki": p.get("wiki"),
                 }
                 for p in pois
             ],

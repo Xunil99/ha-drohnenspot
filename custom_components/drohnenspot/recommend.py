@@ -143,6 +143,8 @@ async def async_find_spots(
             item["poi"] = {
                 "kind": poi["kind"],
                 "name": poi.get("name", ""),
+                "subtype": poi.get("subtype"),
+                "wiki": poi.get("wiki"),
                 "distance_m": round(dist),
             }
             item["near_poi"] = bool(near)

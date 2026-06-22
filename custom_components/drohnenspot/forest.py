@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import math
 from typing import Any, Iterable
+from urllib.parse import quote
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -212,11 +213,69 @@ def _centroid(geom: list) -> tuple[float, float] | None:
     return sum(lats) / len(lats), sum(lons) / len(lons)
 
 
+# Deutsche Labels für häufige historic=*-Untertypen.
+HISTORIC_LABELS = {
+    "castle": "Burg/Schloss",
+    "ruins": "Ruine",
+    "monument": "Denkmal",
+    "memorial": "Gedenkstätte",
+    "archaeological_site": "Archäologische Stätte",
+    "tower": "Turm",
+    "city_gate": "Stadttor",
+    "city_walls": "Stadtmauer",
+    "fort": "Festung",
+    "manor": "Herrenhaus",
+    "monastery": "Kloster",
+    "church": "Historische Kirche",
+    "chapel": "Kapelle",
+    "wayside_cross": "Wegkreuz",
+    "wayside_shrine": "Bildstock",
+    "boundary_stone": "Grenzstein",
+    "battlefield": "Schlachtfeld",
+    "building": "Historisches Gebäude",
+}
+
+
+def wikipedia_url(
+    wikipedia: str | None = None,
+    wikidata: str | None = None,
+    name: str | None = None,
+    lang: str = "de",
+) -> str | None:
+    """Wikipedia-/Wikidata-URL bauen; sonst Such-Link über den Namen; sonst None.
+
+    ``wikipedia``-Tag-Format ist ``lang:Titel`` oder nur ``Titel``.
+    """
+    if wikipedia:
+        if ":" in wikipedia:
+            prefix, title = wikipedia.split(":", 1)
+            if 2 <= len(prefix) <= 5 and prefix.isalpha():
+                return (
+                    f"https://{prefix.lower()}.wikipedia.org/wiki/"
+                    + quote(title.replace(" ", "_"))
+                )
+        return f"https://{lang}.wikipedia.org/wiki/" + quote(wikipedia.replace(" ", "_"))
+    if wikidata and wikidata.startswith("Q") and wikidata[1:].isdigit():
+        return f"https://www.wikidata.org/wiki/{wikidata}"
+    if name:
+        return f"https://{lang}.wikipedia.org/w/index.php?search=" + quote(name)
+    return None
+
+
+def _poi_subtype(kind: str, tags: dict[str, Any]) -> str | None:
+    """Konkreter Untertyp für historische Orte (z. B. 'Burg/Schloss'); sonst None."""
+    if kind != "historic":
+        return None
+    value = tags.get("historic", "")
+    return HISTORIC_LABELS.get(value) or (value.replace("_", " ").capitalize() or None)
+
+
 def parse_overpass_pois(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Sehenswertes-POIs als [{lat, lon, kind, name}] aus der Antwort lesen."""
     pois: list[dict[str, Any]] = []
     for el in (data or {}).get("elements", []):
-        kind = _poi_kind(el.get("tags", {}))
+        tags = el.get("tags", {})
+        kind = _poi_kind(tags)
         if not kind:
             continue
         if el.get("type") == "node" and "lat" in el:
@@ -230,8 +289,18 @@ def parse_overpass_pois(data: dict[str, Any]) -> list[dict[str, Any]]:
             lat, lon = c
         else:
             continue
+        name = tags.get("name", "")
         pois.append(
-            {"lat": lat, "lon": lon, "kind": kind, "name": el["tags"].get("name", "")}
+            {
+                "lat": lat,
+                "lon": lon,
+                "kind": kind,
+                "name": name,
+                "subtype": _poi_subtype(kind, tags),
+                "wiki": wikipedia_url(
+                    tags.get("wikipedia"), tags.get("wikidata"), name or None
+                ),
+            }
         )
     return pois
 

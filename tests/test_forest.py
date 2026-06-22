@@ -256,3 +256,66 @@ def test_nearest_poi_empty():
     poi, dist = forest.nearest_poi(48.9, 12.8, [])
     assert poi is None
     assert dist == float("inf")
+
+
+# --- Wikipedia-Link + Untertyp ---------------------------------------------
+
+def test_wikipedia_url_direct_with_lang():
+    assert (
+        forest.wikipedia_url(wikipedia="de:Burg Falkenfels")
+        == "https://de.wikipedia.org/wiki/Burg_Falkenfels"
+    )
+
+
+def test_wikipedia_url_direct_no_lang():
+    assert (
+        forest.wikipedia_url(wikipedia="Schloss Test")
+        == "https://de.wikipedia.org/wiki/Schloss_Test"
+    )
+
+
+def test_wikipedia_url_english_prefix():
+    assert (
+        forest.wikipedia_url(wikipedia="en:Castle")
+        == "https://en.wikipedia.org/wiki/Castle"
+    )
+
+
+def test_wikipedia_url_wikidata():
+    assert forest.wikipedia_url(wikidata="Q42") == "https://www.wikidata.org/wiki/Q42"
+
+
+def test_wikipedia_url_search_fallback():
+    url = forest.wikipedia_url(name="Alte Burg")
+    assert url.startswith("https://de.wikipedia.org/w/index.php?search=")
+    assert "Alte" in url
+
+
+def test_wikipedia_url_none():
+    assert forest.wikipedia_url() is None
+
+
+def test_parse_pois_subtype_and_search_wiki():
+    pois = forest.parse_overpass_pois(POI_SAMPLE)
+    castle = next(p for p in pois if p["kind"] == "historic")
+    assert castle["subtype"] == "Burg/Schloss"  # historic=castle
+    # kein wikipedia-Tag, aber Name -> Such-Link
+    assert castle["wiki"].startswith("https://de.wikipedia.org/w/index.php?search=")
+
+
+def test_parse_pois_wikipedia_direct():
+    data = {
+        "elements": [
+            {"type": "node", "id": 7, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "ruins", "name": "Ruine X", "wikipedia": "de:Ruine X"}},
+        ]
+    }
+    poi = forest.parse_overpass_pois(data)[0]
+    assert poi["subtype"] == "Ruine"
+    assert poi["wiki"] == "https://de.wikipedia.org/wiki/Ruine_X"
+
+
+def test_parse_pois_viewpoint_has_no_subtype():
+    pois = forest.parse_overpass_pois(POI_SAMPLE)
+    vp = next(p for p in pois if p["kind"] == "viewpoint")
+    assert vp["subtype"] is None

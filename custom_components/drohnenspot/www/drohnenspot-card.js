@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b7";
+const CARD_VERSION = "0.1.0b8";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -312,9 +312,15 @@ class DrohnenspotCard extends HTMLElement {
         icon: this._pin(String(idx + 1), "ds-pin-spot"),
       });
       const weg = s.road_distance_m != null ? `Weg: ${s.road_distance_m} m<br>` : "";
-      const poiTxt = s.poi
-        ? `Nahe: ${POI_EMOJI[s.poi.kind] || "📍"} ${s.poi.name || POI_LABEL[s.poi.kind] || "Sehenswertes"} (${s.poi.distance_m} m)<br>`
-        : "";
+      let poiTxt = "";
+      if (s.poi) {
+        const pn =
+          s.poi.name || s.poi.subtype || POI_LABEL[s.poi.kind] || "Sehenswertes";
+        const pw = s.poi.wiki
+          ? ` <a href="${s.poi.wiki}" target="_blank" rel="noopener">↗</a>`
+          : "";
+        poiTxt = `Nahe: ${POI_EMOJI[s.poi.kind] || "📍"} ${pn} (${s.poi.distance_m} m)${pw}<br>`;
+      }
       marker.bindPopup(
         `<b>Spot ${idx + 1}</b><br>Höhe: ${s.elevation_m} m<br>` +
           `Prominenz: ${s.prominence_m} m<br>Abstand: ${s.distance_km} km<br>` +
@@ -356,12 +362,17 @@ class DrohnenspotCard extends HTMLElement {
     this._poiLayer.clearLayers();
     pois.forEach((p) => {
       const emoji = POI_EMOJI[p.kind] || "📍";
-      const label = POI_LABEL[p.kind] || "Sehenswertes";
+      const label = p.subtype || POI_LABEL[p.kind] || "Sehenswertes";
+      const wikiLink = p.wiki
+        ? `<br><a href="${p.wiki}" target="_blank" rel="noopener">Wikipedia ↗</a>`
+        : "";
       L.marker([p.latitude, p.longitude], {
         icon: this._pin(emoji, "ds-pin-poi"),
         title: p.name || label,
       })
-        .bindPopup(`<b>${emoji} ${label}</b>${p.name ? "<br>" + p.name : ""}`)
+        .bindPopup(
+          `<b>${emoji} ${label}</b>${p.name ? "<br>" + p.name : ""}${wikiLink}`
+        )
         .addTo(this._poiLayer);
     });
   }

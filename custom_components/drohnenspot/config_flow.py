@@ -18,12 +18,16 @@ from .const import (
     CONF_EXCLUDE_FOREST,
     CONF_MAX_ROAD_DISTANCE_M,
     CONF_MIN_ELEVATION,
+    CONF_POI_BONUS,
+    CONF_POI_BONUS_RADIUS_M,
     CONF_RADIUS_KM,
     CONF_REQUIRE_ROAD_ACCESS,
     CONF_SPOT_COUNT,
     DEFAULT_EXCLUDE_FOREST,
     DEFAULT_MAX_ROAD_DISTANCE_M,
     DEFAULT_MIN_ELEVATION,
+    DEFAULT_POI_BONUS,
+    DEFAULT_POI_BONUS_RADIUS_M,
     DEFAULT_RADIUS_KM,
     DEFAULT_REQUIRE_ROAD_ACCESS,
     DEFAULT_SPOT_COUNT,
@@ -61,6 +65,16 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
                     CONF_MAX_ROAD_DISTANCE_M, DEFAULT_MAX_ROAD_DISTANCE_M
                 ),
             ): vol.All(vol.Coerce(int), vol.Range(min=10, max=5000)),
+            vol.Required(
+                CONF_POI_BONUS,
+                default=defaults.get(CONF_POI_BONUS, DEFAULT_POI_BONUS),
+            ): bool,
+            vol.Required(
+                CONF_POI_BONUS_RADIUS_M,
+                default=defaults.get(
+                    CONF_POI_BONUS_RADIUS_M, DEFAULT_POI_BONUS_RADIUS_M
+                ),
+            ): vol.All(vol.Coerce(int), vol.Range(min=50, max=10000)),
         }
     )
 
@@ -105,6 +119,12 @@ class DrohnenspotConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     CONF_MAX_ROAD_DISTANCE_M, default=DEFAULT_MAX_ROAD_DISTANCE_M
                 ): vol.All(vol.Coerce(int), vol.Range(min=10, max=5000)),
+                vol.Required(
+                    CONF_POI_BONUS, default=DEFAULT_POI_BONUS
+                ): bool,
+                vol.Required(
+                    CONF_POI_BONUS_RADIUS_M, default=DEFAULT_POI_BONUS_RADIUS_M
+                ): vol.All(vol.Coerce(int), vol.Range(min=50, max=10000)),
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema)

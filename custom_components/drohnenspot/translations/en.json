@@ -12,7 +12,9 @@
           "min_elevation": "Minimum elevation (m)",
           "exclude_forest": "Exclude forest spots",
           "require_road_access": "Only reachable spots (near road/track)",
-          "max_road_distance_m": "Max. distance to road/track (m)"
+          "max_road_distance_m": "Max. distance to road/track (m)",
+          "poi_bonus": "Bonus for points of interest (near viewpoint/castle/peak)",
+          "poi_bonus_radius_m": "Bonus radius (m)"
         }
       }
     },
@@ -30,7 +32,9 @@
           "min_elevation": "Minimum elevation (m)",
           "exclude_forest": "Exclude forest spots",
           "require_road_access": "Only reachable spots (near road/track)",
-          "max_road_distance_m": "Max. distance to road/track (m)"
+          "max_road_distance_m": "Max. distance to road/track (m)",
+          "poi_bonus": "Bonus for points of interest (near viewpoint/castle/peak)",
+          "poi_bonus_radius_m": "Bonus radius (m)"
         }
       }
     }

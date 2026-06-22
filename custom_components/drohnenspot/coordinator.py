@@ -18,12 +18,16 @@ from .const import (
     CONF_EXCLUDE_FOREST,
     CONF_MAX_ROAD_DISTANCE_M,
     CONF_MIN_ELEVATION,
+    CONF_POI_BONUS,
+    CONF_POI_BONUS_RADIUS_M,
     CONF_RADIUS_KM,
     CONF_REQUIRE_ROAD_ACCESS,
     CONF_SPOT_COUNT,
     DEFAULT_EXCLUDE_FOREST,
     DEFAULT_MAX_ROAD_DISTANCE_M,
     DEFAULT_MIN_ELEVATION,
+    DEFAULT_POI_BONUS,
+    DEFAULT_POI_BONUS_RADIUS_M,
     DEFAULT_RADIUS_KM,
     DEFAULT_REQUIRE_ROAD_ACCESS,
     DEFAULT_SPOT_COUNT,
@@ -108,6 +112,10 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ),
                 max_road_distance_m=float(
                     self._opt(CONF_MAX_ROAD_DISTANCE_M, DEFAULT_MAX_ROAD_DISTANCE_M)
+                ),
+                poi_bonus=bool(self._opt(CONF_POI_BONUS, DEFAULT_POI_BONUS)),
+                poi_bonus_radius_m=float(
+                    self._opt(CONF_POI_BONUS_RADIUS_M, DEFAULT_POI_BONUS_RADIUS_M)
                 ),
             )
             spots = result.get("spots") or []

@@ -9,6 +9,7 @@ Datenquellen: DIPUL (DFS) für Geozonen, OpenTopoData/EU-DEM für Höhen.
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 
 import voluptuous as vol
@@ -34,11 +35,14 @@ from .const import (
     DEFAULT_ELEVATION_DATASET,
     DEFAULT_EXCLUDE_FOREST,
     DEFAULT_MAX_ROAD_DISTANCE_M,
+    DEFAULT_POI_BONUS,
+    DEFAULT_POI_BONUS_RADIUS_M,
     DEFAULT_RADIUS_KM,
     DEFAULT_REQUIRE_ROAD_ACCESS,
     DEFAULT_SPOT_COUNT,
     DOMAIN,
     SERVICE_FIND_SPOTS,
+    SERVICE_GET_POIS,
     SERVICE_QUERY_POINT,
     VERSION,
 )
@@ -73,6 +77,10 @@ FIND_SPOTS_SCHEMA = vol.Schema(
         vol.Optional("max_road_distance_m"): vol.All(
             vol.Coerce(float), vol.Range(min=10, max=5000)
         ),
+        vol.Optional("poi_bonus"): cv.boolean,
+        vol.Optional("poi_bonus_radius_m"): vol.All(
+            vol.Coerce(float), vol.Range(min=50, max=10000)
+        ),
     }
 )
 
@@ -80,6 +88,16 @@ QUERY_POINT_SCHEMA = vol.Schema(
     {
         vol.Required("latitude"): cv.latitude,
         vol.Required("longitude"): cv.longitude,
+    }
+)
+
+GET_POIS_SCHEMA = vol.Schema(
+    {
+        vol.Required("latitude"): cv.latitude,
+        vol.Required("longitude"): cv.longitude,
+        vol.Optional("radius_km", default=DEFAULT_RADIUS_KM): vol.All(
+            vol.Coerce(float), vol.Range(min=0.5, max=50)
+        ),
     }
 )
 
@@ -119,7 +137,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
         if not hass.data[DOMAIN]:
-            for service in (SERVICE_FIND_SPOTS, SERVICE_QUERY_POINT):
+            for service in (SERVICE_FIND_SPOTS, SERVICE_QUERY_POINT, SERVICE_GET_POIS):
                 if hass.services.has_service(DOMAIN, service):
                     hass.services.async_remove(DOMAIN, service)
     return unload_ok
@@ -183,6 +201,10 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 max_road_distance_m=call.data.get(
                     "max_road_distance_m", DEFAULT_MAX_ROAD_DISTANCE_M
                 ),
+                poi_bonus=call.data.get("poi_bonus", DEFAULT_POI_BONUS),
+                poi_bonus_radius_m=call.data.get(
+                    "poi_bonus_radius_m", DEFAULT_POI_BONUS_RADIUS_M
+                ),
             )
         except HomeAssistantError:
             raise
@@ -208,6 +230,31 @@ def _async_register_services(hass: HomeAssistant) -> None:
             "attribution": ATTRIBUTION,
         }
 
+    async def _handle_get_pois(call: ServiceCall) -> ServiceResponse:
+        clients = _get_clients(hass)
+        lat = call.data["latitude"]
+        lon = call.data["longitude"]
+        radius_m = call.data["radius_km"] * 1000.0
+        dlat = radius_m / 111_195.0
+        dlon = radius_m / (111_195.0 * max(0.01, math.cos(math.radians(lat))))
+        bbox = (lat - dlat, lon - dlon, lat + dlat, lon + dlon)
+        try:
+            pois = await clients["forest"].fetch_pois(bbox)
+        except Exception as err:  # noqa: BLE001
+            raise HomeAssistantError(f"POI-Abfrage fehlgeschlagen: {err}") from err
+        return {
+            "pois": [
+                {
+                    "latitude": p["lat"],
+                    "longitude": p["lon"],
+                    "kind": p["kind"],
+                    "name": p["name"],
+                }
+                for p in pois
+            ],
+            "attribution": ATTRIBUTION,
+        }
+
     if not hass.services.has_service(DOMAIN, SERVICE_FIND_SPOTS):
         hass.services.async_register(
             DOMAIN,
@@ -222,5 +269,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
             SERVICE_QUERY_POINT,
             _handle_query_point,
             schema=QUERY_POINT_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_GET_POIS):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_POIS,
+            _handle_get_pois,
+            schema=GET_POIS_SCHEMA,
             supports_response=SupportsResponse.ONLY,
         )

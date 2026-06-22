@@ -84,3 +84,63 @@ find_spots:
           step: 10
           unit_of_measurement: m
           mode: box
+    poi_bonus:
+      name: Bonus für Sehenswertes
+      description: >-
+        Spots nahe Aussichtspunkt/historischem Ort/Gipfel/Turm bevorzugen
+        (OpenStreetMap).
+      required: false
+      selector:
+        boolean:
+    poi_bonus_radius_m:
+      name: Bonus-Radius (m)
+      description: Bis zu diesem Abstand gilt ein Spot als „nahe Sehenswertem".
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 10000
+          step: 50
+          unit_of_measurement: m
+          mode: box
+
+get_pois:
+  name: Sehenswertes laden
+  description: >-
+    Liefert Sehenswertes-POIs (Aussichtspunkte, historische Orte, Gipfel,
+    Aussichtstürme) im Umkreis als Service-Antwort.
+  fields:
+    latitude:
+      name: Breitengrad
+      description: Mittelpunkt.
+      required: true
+      example: 48.9
+      selector:
+        number:
+          min: -90
+          max: 90
+          step: 0.0001
+          mode: box
+    longitude:
+      name: Längengrad
+      description: Mittelpunkt.
+      required: true
+      example: 12.7
+      selector:
+        number:
+          min: -180
+          max: 180
+          step: 0.0001
+          mode: box
+    radius_km:
+      name: Radius (km)
+      description: Umkreis um den Mittelpunkt.
+      required: false
+      default: 10
+      selector:
+        number:
+          min: 0.5
+          max: 50
+          step: 0.5
+          unit_of_measurement: km
+          mode: slider

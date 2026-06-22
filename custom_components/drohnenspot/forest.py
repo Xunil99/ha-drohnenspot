@@ -65,8 +65,28 @@ def build_overpass_query(bbox: tuple[float, float, float, float]) -> str:
         f'relation["landuse"="forest"]({b});'
         f'relation["natural"="wood"]({b});'
         f'way["highway"]({b});'
+        f'node["tourism"="viewpoint"]({b});'
+        f'node["natural"="peak"]({b});'
+        f'nwr["historic"]({b});'
+        f'node["man_made"="tower"]["tower:type"="observation"]({b});'
         ");"
         "out geom;"
+    )
+
+
+def build_pois_query(bbox: tuple[float, float, float, float]) -> str:
+    """Overpass-QL nur für Sehenswertes-POIs (für die Karten-Ebene)."""
+    s, w, n, e = bbox
+    b = f"{s},{w},{n},{e}"
+    return (
+        "[out:json][timeout:25];"
+        "("
+        f'node["tourism"="viewpoint"]({b});'
+        f'node["natural"="peak"]({b});'
+        f'nwr["historic"]({b});'
+        f'node["man_made"="tower"]["tower:type"="observation"]({b});'
+        ");"
+        "out tags center;"
     )
 
 
@@ -166,6 +186,70 @@ def near_road(
     return nearest_road_distance_m(lat, lon, lines) <= max_m
 
 
+def distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Abstand zweier Koordinaten in Metern (äquirektangulär, für kurze Distanzen)."""
+    x, y = _to_xy(lat1, lon1, lat2, lon2)
+    return math.hypot(x, y)
+
+
+def _poi_kind(tags: dict[str, Any]) -> str | None:
+    if tags.get("tourism") == "viewpoint":
+        return "viewpoint"
+    if tags.get("natural") == "peak":
+        return "peak"
+    if tags.get("man_made") == "tower" and tags.get("tower:type") == "observation":
+        return "tower"
+    if tags.get("historic"):
+        return "historic"
+    return None
+
+
+def _centroid(geom: list) -> tuple[float, float] | None:
+    lats = [p["lat"] for p in geom if "lat" in p]
+    lons = [p["lon"] for p in geom if "lon" in p]
+    if not lats:
+        return None
+    return sum(lats) / len(lats), sum(lons) / len(lons)
+
+
+def parse_overpass_pois(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Sehenswertes-POIs als [{lat, lon, kind, name}] aus der Antwort lesen."""
+    pois: list[dict[str, Any]] = []
+    for el in (data or {}).get("elements", []):
+        kind = _poi_kind(el.get("tags", {}))
+        if not kind:
+            continue
+        if el.get("type") == "node" and "lat" in el:
+            lat, lon = el["lat"], el["lon"]
+        elif "center" in el:
+            lat, lon = el["center"]["lat"], el["center"]["lon"]
+        elif el.get("geometry"):
+            c = _centroid(el["geometry"])
+            if c is None:
+                continue
+            lat, lon = c
+        else:
+            continue
+        pois.append(
+            {"lat": lat, "lon": lon, "kind": kind, "name": el["tags"].get("name", "")}
+        )
+    return pois
+
+
+def nearest_poi(
+    lat: float, lon: float, pois: Iterable[dict[str, Any]]
+) -> tuple[dict[str, Any] | None, float]:
+    """Nächsten POI + Abstand (m) finden; (None, inf) wenn keine."""
+    best: dict[str, Any] | None = None
+    best_d = float("inf")
+    for p in pois:
+        d = distance_m(lat, lon, p["lat"], p["lon"])
+        if d < best_d:
+            best_d = d
+            best = p
+    return best, best_d
+
+
 class ForestClient:
     """Best-effort Overpass-Client für Waldflächen."""
 
@@ -187,11 +271,26 @@ class ForestClient:
                 data = await resp.json()
         except Exception as err:  # noqa: BLE001 — best-effort
             _LOGGER.warning("Overpass/OSM-Abfrage fehlgeschlagen: %s", err)
-            return {"forest": [], "roads": []}
+            return {"forest": [], "roads": [], "pois": []}
         return {
             "forest": parse_overpass_forest(data),
             "roads": parse_overpass_roads(data),
+            "pois": parse_overpass_pois(data),
         }
+
+    async def fetch_pois(
+        self, bbox: tuple[float, float, float, float]
+    ) -> list[dict[str, Any]]:
+        """Nur Sehenswertes-POIs in bbox (für die Karten-Ebene). Best-effort."""
+        query = build_pois_query(bbox)
+        try:
+            async with self._session.post(self._url, data=query, timeout=35) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Overpass/POI-Abfrage fehlgeschlagen: %s", err)
+            return []
+        return parse_overpass_pois(data)
 
     async def fetch_polygons(
         self, bbox: tuple[float, float, float, float]

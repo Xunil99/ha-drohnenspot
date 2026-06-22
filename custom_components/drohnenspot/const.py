@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 DOMAIN = "drohnenspot"
-VERSION = "0.1.0b6"
+VERSION = "0.1.0b7"
 
 # Konfigurations-Schlüssel
 CONF_RADIUS_KM = "radius_km"
@@ -12,6 +12,8 @@ CONF_ELEVATION_DATASET = "elevation_dataset"
 CONF_EXCLUDE_FOREST = "exclude_forest"
 CONF_REQUIRE_ROAD_ACCESS = "require_road_access"
 CONF_MAX_ROAD_DISTANCE_M = "max_road_distance_m"
+CONF_POI_BONUS = "poi_bonus"
+CONF_POI_BONUS_RADIUS_M = "poi_bonus_radius_m"
 
 # Vorgaben
 DEFAULT_RADIUS_KM = 10
@@ -21,6 +23,8 @@ DEFAULT_ELEVATION_DATASET = "eudem25m"
 DEFAULT_EXCLUDE_FOREST = True
 DEFAULT_REQUIRE_ROAD_ACCESS = True
 DEFAULT_MAX_ROAD_DISTANCE_M = 200
+DEFAULT_POI_BONUS = True
+DEFAULT_POI_BONUS_RADIUS_M = 500
 UPDATE_INTERVAL_HOURS = 6
 
 # Frontend
@@ -34,3 +38,4 @@ ATTRIBUTION = (
 
 SERVICE_FIND_SPOTS = "find_spots"
 SERVICE_QUERY_POINT = "query_point"
+SERVICE_GET_POIS = "get_pois"

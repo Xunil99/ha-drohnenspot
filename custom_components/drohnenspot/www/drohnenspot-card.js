@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b6";
+const CARD_VERSION = "0.1.0b7";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -28,6 +28,15 @@ const OVERLAY_LAYERS = [
 
 // Naturschutzgebiete als eigener, separat schaltbarer Layer.
 const NATURE_LAYERS = "dipul:naturschutzgebiete";
+
+// Sehenswertes-POIs.
+const POI_EMOJI = { viewpoint: "👀", historic: "🏰", peak: "⛰️", tower: "🗼" };
+const POI_LABEL = {
+  viewpoint: "Aussichtspunkt",
+  historic: "Historischer Ort",
+  peak: "Gipfel",
+  tower: "Aussichtsturm",
+};
 
 let _leafletPromise = null;
 function loadLeaflet() {
@@ -135,6 +144,7 @@ class DrohnenspotCard extends HTMLElement {
         .ds-pin span { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background: var(--primary-color,#03a9f4); color:#fff; font-weight:700; font-size:13px; box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.4); }
         .ds-pin-home span { background:#2e7d32; }
         .ds-pin-best span { background:#f9a825; }
+        .ds-pin-poi span { background:#fff; color:#000; font-size:15px; box-shadow:0 0 0 2px #555,0 1px 4px rgba(0,0,0,.4); }
         .ds-bar { display:flex; align-items:center; gap:12px; padding:10px 16px 4px; flex-wrap:wrap; }
         .ds-btn {
           background: var(--primary-color, #03a9f4); color: var(--text-primary-color,#fff);
@@ -185,6 +195,8 @@ class DrohnenspotCard extends HTMLElement {
 
     this._dipulLayer = L.tileLayer.wms(DIPUL_WMS, wmsOpts(OVERLAY_LAYERS)).addTo(this._map);
     this._natureLayer = L.tileLayer.wms(DIPUL_WMS, wmsOpts(NATURE_LAYERS)).addTo(this._map);
+    // Sehenswertes: leere Ebene, lädt POIs erst beim Einschalten (on-demand).
+    this._poiLayer = L.layerGroup();
 
     L.control
       .layers(
@@ -192,10 +204,18 @@ class DrohnenspotCard extends HTMLElement {
         {
           "Flugverbotszonen (DIPUL)": this._dipulLayer,
           Naturschutzgebiete: this._natureLayer,
+          Sehenswertes: this._poiLayer,
         },
         { collapsed: false }
       )
       .addTo(this._map);
+
+    this._map.on("overlayadd", (e) => {
+      if (e.layer === this._poiLayer) this._loadPois();
+    });
+    this._map.on("overlayremove", (e) => {
+      if (e.layer === this._poiLayer) this._poiLayer.clearLayers();
+    });
 
     this._homeMarker = L.marker([lat, lon], { icon: this._pin("🏠", "ds-pin-home") })
       .addTo(this._map)
@@ -292,10 +312,14 @@ class DrohnenspotCard extends HTMLElement {
         icon: this._pin(String(idx + 1), "ds-pin-spot"),
       });
       const weg = s.road_distance_m != null ? `Weg: ${s.road_distance_m} m<br>` : "";
+      const poiTxt = s.poi
+        ? `Nahe: ${POI_EMOJI[s.poi.kind] || "📍"} ${s.poi.name || POI_LABEL[s.poi.kind] || "Sehenswertes"} (${s.poi.distance_m} m)<br>`
+        : "";
       marker.bindPopup(
         `<b>Spot ${idx + 1}</b><br>Höhe: ${s.elevation_m} m<br>` +
           `Prominenz: ${s.prominence_m} m<br>Abstand: ${s.distance_km} km<br>` +
           weg +
+          poiTxt +
           `<a href="${dipul}" target="_blank" rel="noopener">DIPUL-Check ↗</a>`
       );
       marker.addTo(this._spotLayer);
@@ -304,6 +328,42 @@ class DrohnenspotCard extends HTMLElement {
     if (latlngs.length > 1) {
       this._map.fitBounds(latlngs, { padding: [40, 40], maxZoom: 13 });
     }
+  }
+
+  async _loadPois() {
+    if (!this._map) return;
+    const center = this._map.getCenter();
+    const ne = this._map.getBounds().getNorthEast();
+    const radiusKm = Math.min(50, Math.max(0.5, center.distanceTo(ne) / 1000));
+    this._setStatus("Lade Sehenswertes …");
+    try {
+      const res = await this._callService("get_pois", {
+        latitude: center.lat,
+        longitude: center.lng,
+        radius_km: radiusKm,
+      });
+      const r = (res && res.response) || res || {};
+      this._renderPois(r.pois || []);
+      this._setStatus(`${(r.pois || []).length} Sehenswertes geladen`);
+    } catch (err) {
+      this._setStatus("Sehenswertes: " + (err.message || err));
+    }
+  }
+
+  _renderPois(pois) {
+    if (!this._poiLayer) return;
+    const L = this._L;
+    this._poiLayer.clearLayers();
+    pois.forEach((p) => {
+      const emoji = POI_EMOJI[p.kind] || "📍";
+      const label = POI_LABEL[p.kind] || "Sehenswertes";
+      L.marker([p.latitude, p.longitude], {
+        icon: this._pin(emoji, "ds-pin-poi"),
+        title: p.name || label,
+      })
+        .bindPopup(`<b>${emoji} ${label}</b>${p.name ? "<br>" + p.name : ""}`)
+        .addTo(this._poiLayer);
+    });
   }
 
   _refreshFromEntities() {

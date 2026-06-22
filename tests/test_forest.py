@@ -197,3 +197,62 @@ def test_nearest_road_distance_and_near():
 def test_nearest_road_distance_empty_is_inf():
     assert forest.nearest_road_distance_m(50.0, 6.0, []) == float("inf")
     assert forest.near_road(50.0, 6.0, [], 200.0) is False
+
+
+# --- Sehenswertes (POIs) ----------------------------------------------------
+
+POI_SAMPLE = {
+    "elements": [
+        {"type": "node", "id": 1, "lat": 48.90, "lon": 12.80,
+         "tags": {"tourism": "viewpoint", "name": "Schöne Aussicht"}},
+        {"type": "node", "id": 2, "lat": 48.95, "lon": 12.85,
+         "tags": {"natural": "peak", "name": "Hügel"}},
+        {"type": "way", "id": 3,
+         "tags": {"historic": "castle", "name": "Burg Test"},
+         "geometry": [
+             {"lat": 48.80, "lon": 12.70}, {"lat": 48.80, "lon": 12.72},
+             {"lat": 48.82, "lon": 12.72}, {"lat": 48.82, "lon": 12.70},
+         ]},
+        {"type": "node", "id": 4, "lat": 48.70, "lon": 12.60,
+         "tags": {"man_made": "tower", "tower:type": "observation", "name": "Turm"}},
+        {"type": "node", "id": 5, "lat": 48.60, "lon": 12.50,
+         "tags": {"man_made": "tower"}},  # kein observation -> kein POI
+        {"type": "way", "id": 6, "tags": {"highway": "track"},
+         "geometry": [{"lat": 48.5, "lon": 12.4}, {"lat": 48.5, "lon": 12.41}]},
+    ]
+}
+
+
+def test_parse_pois_kinds_and_filtering():
+    pois = forest.parse_overpass_pois(POI_SAMPLE)
+    kinds = sorted(p["kind"] for p in pois)
+    assert kinds == ["historic", "peak", "tower", "viewpoint"]  # 4, ohne Nicht-POIs
+
+
+def test_parse_pois_way_centroid():
+    pois = forest.parse_overpass_pois(POI_SAMPLE)
+    castle = next(p for p in pois if p["kind"] == "historic")
+    assert castle["name"] == "Burg Test"
+    assert castle["lat"] == pytest.approx(48.81, abs=0.01)
+    assert castle["lon"] == pytest.approx(12.71, abs=0.01)
+
+
+def test_parse_pois_empty():
+    assert forest.parse_overpass_pois({"elements": []}) == []
+
+
+def test_distance_m_one_thousandth_degree():
+    assert forest.distance_m(48.9, 12.8, 48.901, 12.8) == pytest.approx(111.0, rel=0.1)
+
+
+def test_nearest_poi_picks_closest():
+    pois = forest.parse_overpass_pois(POI_SAMPLE)
+    poi, dist = forest.nearest_poi(48.90, 12.80, pois)
+    assert poi["kind"] == "viewpoint"
+    assert dist == pytest.approx(0.0, abs=5.0)
+
+
+def test_nearest_poi_empty():
+    poi, dist = forest.nearest_poi(48.9, 12.8, [])
+    assert poi is None
+    assert dist == float("inf")

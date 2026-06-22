@@ -13,7 +13,12 @@ import math
 from typing import Any
 
 from .const import ATTRIBUTION
-from .forest import near_road, nearest_road_distance_m, point_in_forest
+from .forest import (
+    near_road,
+    nearest_poi,
+    nearest_road_distance_m,
+    point_in_forest,
+)
 from .spotfinder import Candidate, adaptive_spacing, build_grid, rank_candidates
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,6 +58,8 @@ async def async_find_spots(
     exclude_forest: bool = True,
     require_road_access: bool = True,
     max_road_distance_m: float = 200.0,
+    poi_bonus: bool = True,
+    poi_bonus_radius_m: float = 500.0,
 ) -> dict[str, Any]:
     """Beste legale, hoch gelegene Spots im Umkreis finden."""
     spacing = adaptive_spacing(radius_m)
@@ -64,9 +71,9 @@ async def async_find_spots(
     over = max(count * 4, count + 8)
     candidates = rank_candidates(grid, top_k=over, min_elevation=min_elevation)
 
-    # Wald UND Wege in EINER Overpass-Abfrage holen (best-effort).
-    osm: dict[str, list] = {"forest": [], "roads": []}
-    if forest is not None and (exclude_forest or require_road_access):
+    # Wald, Wege UND Sehenswertes in EINER Overpass-Abfrage holen (best-effort).
+    osm: dict[str, list] = {"forest": [], "roads": [], "pois": []}
+    if forest is not None and (exclude_forest or require_road_access or poi_bonus):
         osm = await forest.fetch_osm(_bbox(lat, lon, radius_m))
     roads = osm["roads"]
 
@@ -108,23 +115,45 @@ async def async_find_spots(
         _LOGGER.warning("%s Zonen-Prüfungen fehlgeschlagen", failures)
 
     clear = [c for c in valid if not c.restricted]
-    # Nach Prominenz ordnen (freie Rundumsicht), bei Gleichstand nach Höhe.
-    clear.sort(key=lambda c: (c.prominence, c.elevation), reverse=True)
-    spots = clear[:count]
+
+    # Sehenswertes-POI je Kandidat bestimmen (für Bonus + Anzeige).
+    pois = osm["pois"] if poi_bonus else []
+    enriched = []
+    for c in clear:
+        poi, dist = nearest_poi(c.lat, c.lon, pois) if pois else (None, float("inf"))
+        enriched.append((c, poi, dist, dist <= poi_bonus_radius_m))
+
+    # Starke Bevorzugung: Spots nahe Sehenswertem zuerst, dann nach Prominenz,
+    # dann nach Höhe.
+    enriched.sort(
+        key=lambda t: (1 if t[3] else 0, t[0].prominence, t[0].elevation),
+        reverse=True,
+    )
+    top = enriched[:count]
 
     spots_out = []
-    for c in spots:
+    for c, poi, dist, near in top:
         item = _serialize(c)
         if roads:
             d = nearest_road_distance_m(c.lat, c.lon, roads)
             item["road_distance_m"] = round(d) if d != float("inf") else None
         else:
             item["road_distance_m"] = None
+        if poi is not None and dist != float("inf"):
+            item["poi"] = {
+                "kind": poi["kind"],
+                "name": poi.get("name", ""),
+                "distance_m": round(dist),
+            }
+            item["near_poi"] = bool(near)
+        else:
+            item["poi"] = None
+            item["near_poi"] = False
         spots_out.append(item)
 
     return {
         "spots": spots_out,
-        "found": len(spots),
+        "found": len(spots_out),
         "candidates_evaluated": len(candidates),
         "zones_checked": len(valid),
         "forest_excluded": forest_excluded,

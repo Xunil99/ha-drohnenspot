@@ -319,3 +319,31 @@ def test_parse_pois_viewpoint_has_no_subtype():
     pois = forest.parse_overpass_pois(POI_SAMPLE)
     vp = next(p for p in pois if p["kind"] == "viewpoint")
     assert vp["subtype"] is None
+
+
+def test_parse_pois_excludes_trivial_historic():
+    data = {
+        "elements": [
+            {"type": "node", "id": 1, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "wayside_cross"}},
+            {"type": "node", "id": 2, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "monument", "name": "Säule"}},
+            {"type": "node", "id": 3, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "memorial", "name": "Tafel"}},
+            {"type": "node", "id": 4, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "castle", "name": "Burg"}},
+            {"type": "node", "id": 5, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "ruins"}},
+        ]
+    }
+    pois = forest.parse_overpass_pois(data)
+    # nur Burg + Ruine; Wegkreuz/Denkmal/Gedenktafel raus
+    assert len(pois) == 2
+    assert sorted(p["subtype"] for p in pois) == ["Burg/Schloss", "Ruine"]
+
+
+def test_query_limits_historic_to_significant():
+    q = forest.build_overpass_query((48.0, 12.0, 49.0, 13.0))
+    assert "castle" in q
+    assert "wayside_cross" not in q
+    assert 'nwr["historic"]' not in q  # nicht mehr pauschal alle historic=*

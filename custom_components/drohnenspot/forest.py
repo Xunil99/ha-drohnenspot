@@ -22,6 +22,29 @@ _DEG_M = 111_195.0
 # Diese Wegtypen zählen NICHT als Zugang (kein Halten möglich).
 _ROAD_SKIP = {"motorway", "trunk", "motorway_link", "trunk_link"}
 
+# Nur historisch bedeutsame, aus der Luft interessante Bauwerke — keine
+# Wegkreuze, Bildstöcke, Grenzsteine, Denkmäler/Gedenktafeln, Kirchen,
+# gewöhnlichen alten Gebäude.
+HISTORIC_SIGNIFICANT = frozenset(
+    {
+        "castle",
+        "ruins",
+        "fortress",
+        "fort",
+        "fortification",
+        "citadel",
+        "city_walls",
+        "city_gate",
+        "manor",
+        "monastery",
+        "palace",
+        "tower",
+        "archaeological_site",
+        "aqueduct",
+    }
+)
+_HISTORIC_RE = "|".join(sorted(HISTORIC_SIGNIFICANT))
+
 Ring = list  # list[tuple[float, float]] — (lat, lon)
 
 
@@ -68,7 +91,7 @@ def build_overpass_query(bbox: tuple[float, float, float, float]) -> str:
         f'way["highway"]({b});'
         f'node["tourism"="viewpoint"]({b});'
         f'node["natural"="peak"]({b});'
-        f'nwr["historic"]({b});'
+        f'nwr["historic"~"^({_HISTORIC_RE})$"]({b});'
         f'node["man_made"="tower"]["tower:type"="observation"]({b});'
         ");"
         "out geom;"
@@ -84,7 +107,7 @@ def build_pois_query(bbox: tuple[float, float, float, float]) -> str:
         "("
         f'node["tourism"="viewpoint"]({b});'
         f'node["natural"="peak"]({b});'
-        f'nwr["historic"]({b});'
+        f'nwr["historic"~"^({_HISTORIC_RE})$"]({b});'
         f'node["man_made"="tower"]["tower:type"="observation"]({b});'
         ");"
         "out tags center;"
@@ -200,7 +223,7 @@ def _poi_kind(tags: dict[str, Any]) -> str | None:
         return "peak"
     if tags.get("man_made") == "tower" and tags.get("tower:type") == "observation":
         return "tower"
-    if tags.get("historic"):
+    if tags.get("historic") in HISTORIC_SIGNIFICANT:
         return "historic"
     return None
 
@@ -224,6 +247,11 @@ HISTORIC_LABELS = {
     "city_gate": "Stadttor",
     "city_walls": "Stadtmauer",
     "fort": "Festung",
+    "fortress": "Festung",
+    "fortification": "Befestigung",
+    "citadel": "Zitadelle",
+    "palace": "Palast/Schloss",
+    "aqueduct": "Aquädukt",
     "manor": "Herrenhaus",
     "monastery": "Kloster",
     "church": "Historische Kirche",

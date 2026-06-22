@@ -146,6 +146,8 @@ async def async_find_spots(
                 "name": poi.get("name", ""),
                 "subtype": poi.get("subtype"),
                 "wiki": poi.get("wiki"),
+                "latitude": round(poi["lat"], 6),
+                "longitude": round(poi["lon"], 6),
                 "distance_m": round(dist),
             }
             item["near_poi"] = bool(near)

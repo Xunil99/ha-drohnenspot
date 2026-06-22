@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b10";
+const CARD_VERSION = "0.1.0b11";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -316,6 +316,7 @@ class DrohnenspotCard extends HTMLElement {
     const L = this._L;
     this._spotLayer.clearLayers();
     const latlngs = [];
+    const seenPoi = new Set();
     spots.forEach((s, idx) => {
       const dipul = `https://maps.dipul.de/?lat=${s.latitude}&lng=${s.longitude}`;
       const marker = L.marker([s.latitude, s.longitude], {
@@ -341,6 +342,36 @@ class DrohnenspotCard extends HTMLElement {
       );
       marker.addTo(this._spotLayer);
       latlngs.push([s.latitude, s.longitude]);
+
+      // Zugehörigen POI mitzeichnen + dünne Verbindungslinie Spot -> POI.
+      if (s.poi && s.poi.latitude != null) {
+        const p = s.poi;
+        const pll = [p.latitude, p.longitude];
+        L.polyline([[s.latitude, s.longitude], pll], {
+          color: "#555",
+          weight: 1.5,
+          dashArray: "4 4",
+          opacity: 0.8,
+        }).addTo(this._spotLayer);
+        const key = `${p.latitude.toFixed(5)},${p.longitude.toFixed(5)}`;
+        if (!seenPoi.has(key)) {
+          seenPoi.add(key);
+          const emoji = POI_EMOJI[p.kind] || "📍";
+          const label = p.subtype || POI_LABEL[p.kind] || "Sehenswertes";
+          const wikiLink = p.wiki
+            ? `<br><a href="${p.wiki}" target="_blank" rel="noopener">Wikipedia ↗</a>`
+            : "";
+          L.marker(pll, {
+            icon: this._pin(emoji, "ds-pin-poi"),
+            title: p.name || label,
+          })
+            .bindPopup(
+              `<b>${emoji} ${label}</b>${p.name ? "<br>" + p.name : ""}${wikiLink}`
+            )
+            .addTo(this._spotLayer);
+        }
+        latlngs.push(pll);
+      }
     });
     if (latlngs.length > 1) {
       this._map.fitBounds(latlngs, { padding: [40, 40], maxZoom: 13 });

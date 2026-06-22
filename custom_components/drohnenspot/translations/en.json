@@ -9,7 +9,8 @@
           "longitude": "Longitude (centre)",
           "radius_km": "Search radius (km)",
           "spot_count": "Number of spots",
-          "min_elevation": "Minimum elevation (m)"
+          "min_elevation": "Minimum elevation (m)",
+          "exclude_forest": "Exclude forest spots"
         }
       }
     },
@@ -24,7 +25,8 @@
         "data": {
           "radius_km": "Search radius (km)",
           "spot_count": "Number of spots",
-          "min_elevation": "Minimum elevation (m)"
+          "min_elevation": "Minimum elevation (m)",
+          "exclude_forest": "Exclude forest spots"
         }
       }
     }

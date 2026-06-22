@@ -15,9 +15,11 @@ from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    CONF_EXCLUDE_FOREST,
     CONF_MIN_ELEVATION,
     CONF_RADIUS_KM,
     CONF_SPOT_COUNT,
+    DEFAULT_EXCLUDE_FOREST,
     DEFAULT_MIN_ELEVATION,
     DEFAULT_RADIUS_KM,
     DEFAULT_SPOT_COUNT,
@@ -39,6 +41,10 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_MIN_ELEVATION,
                 default=defaults.get(CONF_MIN_ELEVATION, DEFAULT_MIN_ELEVATION),
             ): vol.All(vol.Coerce(float), vol.Range(min=0, max=3000)),
+            vol.Required(
+                CONF_EXCLUDE_FOREST,
+                default=defaults.get(CONF_EXCLUDE_FOREST, DEFAULT_EXCLUDE_FOREST),
+            ): bool,
         }
     )
 
@@ -74,6 +80,9 @@ class DrohnenspotConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     CONF_MIN_ELEVATION, default=DEFAULT_MIN_ELEVATION
                 ): vol.All(vol.Coerce(float), vol.Range(min=0, max=3000)),
+                vol.Required(
+                    CONF_EXCLUDE_FOREST, default=DEFAULT_EXCLUDE_FOREST
+                ): bool,
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema)

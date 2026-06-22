@@ -119,6 +119,23 @@ def test_rank_ignores_cells_without_elevation():
     assert cands[0].elevation == 300
 
 
+def test_rank_orders_by_prominence_not_elevation():
+    # X: sehr hoch (1000) aber wenig prominent (Nachbarn 900 -> Prominenz 100)
+    # Y: niedriger (300) aber sehr prominent (Nachbarn 100 -> Prominenz 200)
+    # Sortierung nach Prominenz -> Y muss VOR X kommen (trotz geringerer Höhe).
+    matrix = [
+        [900, 900, 900, 100, 100, 100, 100],
+        [900, 1000, 900, 100, 300, 100, 100],
+        [900, 900, 900, 100, 100, 100, 100],
+    ]
+    grid = sf.Grid.from_matrix(matrix, center_lat=52.0, center_lon=13.0, spacing_m=200.0)
+    cands = sf.rank_candidates(grid, top_k=10)
+    assert len(cands) == 2
+    assert cands[0].prominence == pytest.approx(200.0)  # Y zuerst
+    assert cands[0].elevation == 300
+    assert cands[1].elevation == 1000  # X danach
+
+
 def test_rank_plateau_not_a_peak():
     # Reines Plateau hat keinen lokalen Gipfel -> keine Kandidaten
     matrix = [[100, 100, 100], [100, 100, 100], [100, 100, 100]]

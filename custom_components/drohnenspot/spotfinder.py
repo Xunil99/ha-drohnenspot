@@ -174,5 +174,7 @@ def rank_candidates(
                 ),
             )
         )
-    candidates.sort(key=lambda c: (c.score, c.elevation), reverse=True)
+    # Nach Prominenz ordnen (wie stark der Punkt herausragt -> freie Rundumsicht),
+    # bei Gleichstand nach Höhe.
+    candidates.sort(key=lambda c: (c.prominence, c.elevation), reverse=True)
     return candidates[:top_k]

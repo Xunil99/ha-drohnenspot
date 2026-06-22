@@ -2,19 +2,21 @@
 from __future__ import annotations
 
 DOMAIN = "drohnenspot"
-VERSION = "0.1.0b4"
+VERSION = "0.1.0b5"
 
 # Konfigurations-Schlüssel
 CONF_RADIUS_KM = "radius_km"
 CONF_SPOT_COUNT = "spot_count"
 CONF_MIN_ELEVATION = "min_elevation"
 CONF_ELEVATION_DATASET = "elevation_dataset"
+CONF_EXCLUDE_FOREST = "exclude_forest"
 
 # Vorgaben
 DEFAULT_RADIUS_KM = 10
 DEFAULT_SPOT_COUNT = 8
 DEFAULT_MIN_ELEVATION = 0
 DEFAULT_ELEVATION_DATASET = "eudem25m"
+DEFAULT_EXCLUDE_FOREST = True
 UPDATE_INTERVAL_HOURS = 6
 
 # Frontend

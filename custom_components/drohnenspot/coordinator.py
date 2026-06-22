@@ -15,9 +15,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_EXCLUDE_FOREST,
     CONF_MIN_ELEVATION,
     CONF_RADIUS_KM,
     CONF_SPOT_COUNT,
+    DEFAULT_EXCLUDE_FOREST,
     DEFAULT_MIN_ELEVATION,
     DEFAULT_RADIUS_KM,
     DEFAULT_SPOT_COUNT,
@@ -26,6 +28,7 @@ from .const import (
 )
 from .dipul import DipulClient, summarize_restrictions
 from .elevation import ElevationClient
+from .forest import ForestClient
 from .recommend import async_find_spots
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,6 +43,7 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         entry: ConfigEntry,
         dipul: DipulClient,
         elevation: ElevationClient,
+        forest: ForestClient,
     ) -> None:
         super().__init__(
             hass,
@@ -50,6 +54,7 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry = entry
         self.dipul = dipul
         self.elevation = elevation
+        self.forest = forest
 
     def _opt(self, key: str, default: Any) -> Any:
         return self.entry.options.get(key, self.entry.data.get(key, default))
@@ -90,6 +95,10 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 radius_km * 1000.0,
                 count=1,
                 min_elevation=min_elev or None,
+                forest=self.forest,
+                exclude_forest=bool(
+                    self._opt(CONF_EXCLUDE_FOREST, DEFAULT_EXCLUDE_FOREST)
+                ),
             )
             spots = result.get("spots") or []
             if spots:

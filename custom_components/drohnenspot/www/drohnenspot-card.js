@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b4";
+const CARD_VERSION = "0.1.0b5";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -18,7 +18,6 @@ const OVERLAY_LAYERS = [
   "flugplaetze",
   "militaerische_anlagen",
   "temporaere_betriebseinschraenkungen",
-  "naturschutzgebiete",
   "nationalparks",
   "vogelschutzgebiete",
   "ffh-gebiete",
@@ -26,6 +25,9 @@ const OVERLAY_LAYERS = [
 ]
   .map((n) => "dipul:" + n)
   .join(",");
+
+// Naturschutzgebiete als eigener, separat schaltbarer Layer.
+const NATURE_LAYERS = "dipul:naturschutzgebiete";
 
 let _leafletPromise = null;
 function loadLeaflet() {
@@ -172,19 +174,27 @@ class DrohnenspotCard extends HTMLElement {
     if (this._config.tile_subdomains) baseOpts.subdomains = this._config.tile_subdomains;
     L.tileLayer(tileUrl, baseOpts).addTo(this._map);
 
-    this._dipulLayer = L.tileLayer
-      .wms(DIPUL_WMS, {
-        layers: OVERLAY_LAYERS,
-        format: "image/png",
-        transparent: true,
-        version: "1.3.0",
-        opacity: 0.5,
-        attribution: "Geozonen © DFS / BKG",
-      })
-      .addTo(this._map);
+    const wmsOpts = (layers) => ({
+      layers,
+      format: "image/png",
+      transparent: true,
+      version: "1.3.0",
+      opacity: 0.5,
+      attribution: "Geozonen © DFS / BKG",
+    });
+
+    this._dipulLayer = L.tileLayer.wms(DIPUL_WMS, wmsOpts(OVERLAY_LAYERS)).addTo(this._map);
+    this._natureLayer = L.tileLayer.wms(DIPUL_WMS, wmsOpts(NATURE_LAYERS)).addTo(this._map);
 
     L.control
-      .layers(null, { "Flugverbotszonen (DIPUL)": this._dipulLayer }, { collapsed: false })
+      .layers(
+        null,
+        {
+          "Flugverbotszonen (DIPUL)": this._dipulLayer,
+          Naturschutzgebiete: this._natureLayer,
+        },
+        { collapsed: false }
+      )
       .addTo(this._map);
 
     this._homeMarker = L.marker([lat, lon], { icon: this._pin("🏠", "ds-pin-home") })

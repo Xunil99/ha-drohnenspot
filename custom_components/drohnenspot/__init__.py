@@ -28,9 +28,11 @@ from .const import (
     ATTRIBUTION,
     CARD_URL,
     CONF_ELEVATION_DATASET,
+    CONF_EXCLUDE_FOREST,
     CONF_MIN_ELEVATION,
     CONF_RADIUS_KM,
     DEFAULT_ELEVATION_DATASET,
+    DEFAULT_EXCLUDE_FOREST,
     DEFAULT_RADIUS_KM,
     DEFAULT_SPOT_COUNT,
     DOMAIN,
@@ -46,6 +48,7 @@ from .dipul import (
     summarize_restrictions,
 )
 from .elevation import ElevationClient
+from .forest import ForestClient
 from .recommend import async_find_spots
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,6 +66,7 @@ FIND_SPOTS_SCHEMA = vol.Schema(
             vol.Coerce(int), vol.Range(min=1, max=30)
         ),
         vol.Optional("min_elevation"): vol.All(vol.Coerce(float), vol.Range(min=0)),
+        vol.Optional("exclude_forest"): cv.boolean,
     }
 )
 
@@ -83,14 +87,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     dipul = DipulClient(session)
     elevation = ElevationClient(session, dataset=dataset)
+    forest = ForestClient(session)
 
-    coordinator = DrohnenspotCoordinator(hass, entry, dipul, elevation)
+    coordinator = DrohnenspotCoordinator(hass, entry, dipul, elevation, forest)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "coordinator": coordinator,
         "dipul": dipul,
         "elevation": elevation,
+        "forest": forest,
     }
 
     await _async_register_frontend(hass)
@@ -163,6 +169,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 call.data["radius_km"] * 1000.0,
                 count=call.data["count"],
                 min_elevation=call.data.get("min_elevation"),
+                forest=clients["forest"],
+                exclude_forest=call.data.get("exclude_forest", DEFAULT_EXCLUDE_FOREST),
             )
         except HomeAssistantError:
             raise

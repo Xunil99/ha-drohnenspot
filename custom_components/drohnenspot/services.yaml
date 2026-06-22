@@ -58,3 +58,11 @@ find_spots:
           step: 10
           unit_of_measurement: m
           mode: box
+    exclude_forest:
+      name: Wald-Spots ausschließen
+      description: >-
+        Spots, die im Wald liegen, aus den Ergebnissen entfernen
+        (Walddaten aus OpenStreetMap). Vorgabe aus der Integration.
+      required: false
+      selector:
+        boolean:

@@ -9,14 +9,23 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from typing import Any
 
 from .const import ATTRIBUTION
+from .forest import point_in_forest
 from .spotfinder import Candidate, adaptive_spacing, build_grid, rank_candidates
 
 _LOGGER = logging.getLogger(__name__)
 
 _ZONE_CHECK_CONCURRENCY = 4  # schonend gegenüber DIPUL
+
+
+def _bbox(lat: float, lon: float, radius_m: float) -> tuple[float, float, float, float]:
+    """Bounding-Box (süd, west, nord, ost) um den Mittelpunkt."""
+    dlat = radius_m / 111_195.0
+    dlon = radius_m / (111_195.0 * max(0.01, math.cos(math.radians(lat))))
+    return (lat - dlat, lon - dlon, lat + dlat, lon + dlon)
 
 
 def _serialize(candidate: Candidate) -> dict[str, Any]:
@@ -40,16 +49,29 @@ async def async_find_spots(
     count: int,
     min_elevation: float | None = None,
     restriction_layers: list[str] | None = None,
+    forest: Any = None,
+    exclude_forest: bool = True,
 ) -> dict[str, Any]:
     """Beste legale, hoch gelegene Spots im Umkreis finden."""
     spacing = adaptive_spacing(radius_m)
     grid = build_grid(lat, lon, radius_m, spacing)
     await elevation.fetch_grid(grid)
 
-    # Etwas mehr Kandidaten als nötig küren, damit nach dem Zonen-Filter
+    # Etwas mehr Kandidaten als nötig küren, damit nach den Filtern
     # noch genug übrig bleibt.
     over = max(count * 4, count + 8)
     candidates = rank_candidates(grid, top_k=over, min_elevation=min_elevation)
+
+    # Wald-Spots vorab lokal aussortieren (spart spätere DIPUL-Abfragen).
+    forest_excluded = 0
+    if exclude_forest and forest is not None:
+        polygons = await forest.fetch_polygons(_bbox(lat, lon, radius_m))
+        if polygons:
+            before = len(candidates)
+            candidates = [
+                c for c in candidates if not point_in_forest(c.lat, c.lon, polygons)
+            ]
+            forest_excluded = before - len(candidates)
 
     sem = asyncio.Semaphore(_ZONE_CHECK_CONCURRENCY)
 
@@ -71,7 +93,8 @@ async def async_find_spots(
         _LOGGER.warning("%s Zonen-Prüfungen fehlgeschlagen", failures)
 
     clear = [c for c in valid if not c.restricted]
-    clear.sort(key=lambda c: (c.score, c.elevation), reverse=True)
+    # Nach Prominenz ordnen (freie Rundumsicht), bei Gleichstand nach Höhe.
+    clear.sort(key=lambda c: (c.prominence, c.elevation), reverse=True)
     spots = clear[:count]
 
     return {
@@ -79,6 +102,7 @@ async def async_find_spots(
         "found": len(spots),
         "candidates_evaluated": len(candidates),
         "zones_checked": len(valid),
+        "forest_excluded": forest_excluded,
         "center": {"latitude": round(lat, 6), "longitude": round(lon, 6)},
         "radius_km": round(radius_m / 1000, 1),
         "attribution": ATTRIBUTION,

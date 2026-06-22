@@ -26,9 +26,12 @@ Bewegungsfreiheit, ohne in eine Verbotszone zu geraten.
 - 🗺️ **Lovelace-Karte** `drohnenspot-card` (registriert sich automatisch):
   Relief-Basis (Esri World Topo, frei tauschbar) mit ein-/ausschaltbaren Ebenen
   - **Flugverbotszonen (DIPUL)** — offizielles Zonen-Overlay
+  - **Temporäre Sperrungen (NOTAM)** — eigener Layer; aktive temporäre
+    Sperrung wird beim Tippen rot ⛔ hervorgehoben
   - **Naturschutzgebiete** — eigener Layer
-  - **Sehenswertes** — Aussichtspunkte 👀, historische Orte 🏰, Gipfel ⛰️,
-    Aussichtstürme 🗼 (lädt on-demand, mit **Wikipedia-Link** im Popup)
+  - **Sehenswertes** — Aussichtspunkte 👀, historische Orte 🏰 (nur markante
+    Bauwerke), Lost Places 🏚️, Gipfel ⛰️, Aussichtstürme 🗼 (lädt on-demand,
+    mit **Wikipedia-Link** im Popup; Kategorien in den Optionen filterbar)
 - 👆 **Tippen auf die Karte** zeigt Zonen + Geländehöhe an der Stelle.
 - 🔎 **Spot-Empfehlung** mit Filter-Stack: **legal** (DIPUL-Zonen) · **kein
   Wald** · **erreichbar** (nahe Straße/Feldweg) · optional **Mindesthöhe** ·
@@ -79,6 +82,7 @@ Unter *Einstellungen → Geräte & Dienste → Drohnenspot → Konfigurieren*:
 | Max. Abstand zur Straße/Weg (m) | 200 | Grenze für „erreichbar" |
 | Bonus für Sehenswertes | an | Spots nahe Aussicht/Burg/Gipfel bevorzugen |
 | Bonus-Radius (m) | 500 | Bis hierhin gilt ein Spot als „nahe Sehenswertem" |
+| Sehenswertes-Kategorien | alle | Welche Arten gezeigt/bewertet werden (Aussichtspunkte, Historische Orte, Lost Places, Gipfel, Aussichtstürme) |
 
 ## Karte einrichten
 

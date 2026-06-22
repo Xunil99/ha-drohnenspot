@@ -77,8 +77,35 @@ def point_in_forest(
     return False
 
 
-def build_overpass_query(bbox: tuple[float, float, float, float]) -> str:
-    """Overpass-QL für Waldflächen in bbox = (süd, west, nord, ost)."""
+# Verfügbare Sehenswertes-Kategorien.
+POI_CATEGORIES = ("viewpoint", "historic", "lostplace", "peak", "tower")
+
+
+def _poi_query_parts(b: str, categories: Iterable[str] | None) -> str:
+    """Overpass-Fragmente für die aktivierten POI-Kategorien."""
+    cats = set(categories) if categories else set(POI_CATEGORIES)
+    parts: list[str] = []
+    if "viewpoint" in cats:
+        parts.append(f'node["tourism"="viewpoint"]({b});')
+    if "peak" in cats:
+        parts.append(f'node["natural"="peak"]({b});')
+    if "tower" in cats:
+        parts.append(f'node["man_made"="tower"]["tower:type"="observation"]({b});')
+    if "historic" in cats:
+        parts.append(f'nwr["historic"~"^({_HISTORIC_RE})$"]({b});')
+    if "lostplace" in cats:
+        parts.append(f'nwr["building"="ruins"]({b});')
+        parts.append(f'nwr["military"="bunker"]({b});')
+        parts.append(f'nwr["man_made"~"^(adit|mineshaft)$"]({b});')
+        parts.append(f'nwr["abandoned:building"]({b});')
+        parts.append(f'nwr["disused:building"]({b});')
+    return "".join(parts)
+
+
+def build_overpass_query(
+    bbox: tuple[float, float, float, float], categories: Iterable[str] | None = None
+) -> str:
+    """Overpass-QL: Wald + Wege + (aktivierte) Sehenswertes-Kategorien."""
     s, w, n, e = bbox
     b = f"{s},{w},{n},{e}"
     return (
@@ -89,27 +116,21 @@ def build_overpass_query(bbox: tuple[float, float, float, float]) -> str:
         f'relation["landuse"="forest"]({b});'
         f'relation["natural"="wood"]({b});'
         f'way["highway"]({b});'
-        f'node["tourism"="viewpoint"]({b});'
-        f'node["natural"="peak"]({b});'
-        f'nwr["historic"~"^({_HISTORIC_RE})$"]({b});'
-        f'node["man_made"="tower"]["tower:type"="observation"]({b});'
-        ");"
+        + _poi_query_parts(b, categories)
+        + ");"
         "out geom;"
     )
 
 
-def build_pois_query(bbox: tuple[float, float, float, float]) -> str:
-    """Overpass-QL nur für Sehenswertes-POIs (für die Karten-Ebene)."""
+def build_pois_query(
+    bbox: tuple[float, float, float, float], categories: Iterable[str] | None = None
+) -> str:
+    """Overpass-QL nur für die (aktivierten) Sehenswertes-Kategorien."""
     s, w, n, e = bbox
     b = f"{s},{w},{n},{e}"
     return (
         "[out:json][timeout:25];"
-        "("
-        f'node["tourism"="viewpoint"]({b});'
-        f'node["natural"="peak"]({b});'
-        f'nwr["historic"~"^({_HISTORIC_RE})$"]({b});'
-        f'node["man_made"="tower"]["tower:type"="observation"]({b});'
-        ");"
+        "(" + _poi_query_parts(b, categories) + ");"
         "out tags center;"
     )
 
@@ -216,6 +237,22 @@ def distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return math.hypot(x, y)
 
 
+def _is_lostplace(tags: dict[str, Any]) -> bool:
+    """Verlassener/stillgelegter Ort (Lost Place)?"""
+    if tags.get("building") == "ruins" or tags.get("ruins") == "yes":
+        return True
+    if tags.get("military") == "bunker":
+        return True
+    if tags.get("man_made") in ("adit", "mineshaft"):
+        return True
+    for key, value in tags.items():
+        if key.startswith("abandoned:") or key.startswith("disused:"):
+            return True
+        if key in ("abandoned", "disused") and value not in (None, "no"):
+            return True
+    return False
+
+
 def _poi_kind(tags: dict[str, Any]) -> str | None:
     if tags.get("tourism") == "viewpoint":
         return "viewpoint"
@@ -225,6 +262,8 @@ def _poi_kind(tags: dict[str, Any]) -> str | None:
         return "tower"
     if tags.get("historic") in HISTORIC_SIGNIFICANT:
         return "historic"
+    if _is_lostplace(tags):
+        return "lostplace"
     return None
 
 
@@ -291,20 +330,33 @@ def wikipedia_url(
 
 
 def _poi_subtype(kind: str, tags: dict[str, Any]) -> str | None:
-    """Konkreter Untertyp für historische Orte (z. B. 'Burg/Schloss'); sonst None."""
-    if kind != "historic":
-        return None
-    value = tags.get("historic", "")
-    return HISTORIC_LABELS.get(value) or (value.replace("_", " ").capitalize() or None)
+    """Konkreter Untertyp (z. B. 'Burg/Schloss', 'Bunker'); sonst None."""
+    if kind == "historic":
+        value = tags.get("historic", "")
+        return HISTORIC_LABELS.get(value) or (value.replace("_", " ").capitalize() or None)
+    if kind == "lostplace":
+        if tags.get("military") == "bunker":
+            return "Bunker"
+        if tags.get("man_made") in ("adit", "mineshaft"):
+            return "Bergwerk/Stollen"
+        return "Gebäuderuine"
+    return None
 
 
-def parse_overpass_pois(data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Sehenswertes-POIs als [{lat, lon, kind, name}] aus der Antwort lesen."""
+def parse_overpass_pois(
+    data: dict[str, Any], categories: Iterable[str] | None = None
+) -> list[dict[str, Any]]:
+    """Sehenswertes-POIs als [{lat, lon, kind, name, subtype, wiki}] lesen.
+
+    ``categories`` filtert die Ergebnisse zusätzlich exakt auf die erlaubten
+    Arten (fängt Quer-Klassifizierungen ab, z. B. historic=tower als 'tower').
+    """
+    allowed = set(categories) if categories is not None else None
     pois: list[dict[str, Any]] = []
     for el in (data or {}).get("elements", []):
         tags = el.get("tags", {})
         kind = _poi_kind(tags)
-        if not kind:
+        if not kind or (allowed is not None and kind not in allowed):
             continue
         if el.get("type") == "node" and "lat" in el:
             lat, lon = el["lat"], el["lon"]
@@ -355,13 +407,15 @@ class ForestClient:
         self._url = url
 
     async def fetch_osm(
-        self, bbox: tuple[float, float, float, float]
-    ) -> dict[str, list[list[tuple[float, float]]]]:
-        """Wald-Polygone UND Wege-Linien in einem Aufruf holen.
+        self,
+        bbox: tuple[float, float, float, float],
+        categories: Iterable[str] | None = None,
+    ) -> dict[str, list]:
+        """Wald-Polygone, Wege-Linien UND Sehenswertes in einem Aufruf holen.
 
         Bei Fehler/Timeout: leere Listen (best-effort, keine Filterung).
         """
-        query = build_overpass_query(bbox)
+        query = build_overpass_query(bbox, categories)
         try:
             async with self._session.post(self._url, data=query, timeout=35) as resp:
                 resp.raise_for_status()
@@ -372,14 +426,16 @@ class ForestClient:
         return {
             "forest": parse_overpass_forest(data),
             "roads": parse_overpass_roads(data),
-            "pois": parse_overpass_pois(data),
+            "pois": parse_overpass_pois(data, categories),
         }
 
     async def fetch_pois(
-        self, bbox: tuple[float, float, float, float]
+        self,
+        bbox: tuple[float, float, float, float],
+        categories: Iterable[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Nur Sehenswertes-POIs in bbox (für die Karten-Ebene). Best-effort."""
-        query = build_pois_query(bbox)
+        query = build_pois_query(bbox, categories)
         try:
             async with self._session.post(self._url, data=query, timeout=35) as resp:
                 resp.raise_for_status()
@@ -387,7 +443,7 @@ class ForestClient:
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Overpass/POI-Abfrage fehlgeschlagen: %s", err)
             return []
-        return parse_overpass_pois(data)
+        return parse_overpass_pois(data, categories)
 
     async def fetch_polygons(
         self, bbox: tuple[float, float, float, float]

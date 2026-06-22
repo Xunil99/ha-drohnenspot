@@ -60,6 +60,7 @@ async def async_find_spots(
     max_road_distance_m: float = 200.0,
     poi_bonus: bool = True,
     poi_bonus_radius_m: float = 500.0,
+    poi_categories: list[str] | None = None,
 ) -> dict[str, Any]:
     """Beste legale, hoch gelegene Spots im Umkreis finden."""
     spacing = adaptive_spacing(radius_m)
@@ -74,7 +75,7 @@ async def async_find_spots(
     # Wald, Wege UND Sehenswertes in EINER Overpass-Abfrage holen (best-effort).
     osm: dict[str, list] = {"forest": [], "roads": [], "pois": []}
     if forest is not None and (exclude_forest or require_road_access or poi_bonus):
-        osm = await forest.fetch_osm(_bbox(lat, lon, radius_m))
+        osm = await forest.fetch_osm(_bbox(lat, lon, radius_m), poi_categories)
     roads = osm["roads"]
 
     # Wald-Spots vorab lokal aussortieren (spart spätere DIPUL-Abfragen).

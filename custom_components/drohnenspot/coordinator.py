@@ -20,6 +20,7 @@ from .const import (
     CONF_MIN_ELEVATION,
     CONF_POI_BONUS,
     CONF_POI_BONUS_RADIUS_M,
+    CONF_POI_CATEGORIES,
     CONF_RADIUS_KM,
     CONF_REQUIRE_ROAD_ACCESS,
     CONF_SPOT_COUNT,
@@ -28,6 +29,7 @@ from .const import (
     DEFAULT_MIN_ELEVATION,
     DEFAULT_POI_BONUS,
     DEFAULT_POI_BONUS_RADIUS_M,
+    DEFAULT_POI_CATEGORIES,
     DEFAULT_RADIUS_KM,
     DEFAULT_REQUIRE_ROAD_ACCESS,
     DEFAULT_SPOT_COUNT,
@@ -75,6 +77,10 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def longitude(self) -> float:
         return self._opt("longitude", self.hass.config.longitude)
 
+    @property
+    def poi_categories(self) -> list[str]:
+        return self._opt(CONF_POI_CATEGORIES, DEFAULT_POI_CATEGORIES)
+
     async def _async_update_data(self) -> dict[str, Any]:
         lat, lon = self.latitude, self.longitude
         try:
@@ -117,6 +123,7 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 poi_bonus_radius_m=float(
                     self._opt(CONF_POI_BONUS_RADIUS_M, DEFAULT_POI_BONUS_RADIUS_M)
                 ),
+                poi_categories=self.poi_categories,
             )
             spots = result.get("spots") or []
             if spots:

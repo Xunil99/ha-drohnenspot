@@ -347,3 +347,68 @@ def test_query_limits_historic_to_significant():
     assert "castle" in q
     assert "wayside_cross" not in q
     assert 'nwr["historic"]' not in q  # nicht mehr pauschal alle historic=*
+
+
+# --- Lost Places + Kategorie-Filter ----------------------------------------
+
+def test_poi_kind_lostplace():
+    assert forest._poi_kind({"building": "ruins"}) == "lostplace"
+    assert forest._poi_kind({"military": "bunker"}) == "lostplace"
+    assert forest._poi_kind({"man_made": "mineshaft"}) == "lostplace"
+    assert forest._poi_kind({"abandoned:building": "yes"}) == "lostplace"
+    assert forest._poi_kind({"disused:railway": "platform"}) == "lostplace"
+    # gewöhnliches Gebäude / Burg sind KEINE Lost Places
+    assert forest._poi_kind({"building": "yes"}) is None
+    assert forest._poi_kind({"historic": "castle"}) == "historic"
+
+
+def test_parse_pois_lostplace_subtype():
+    data = {
+        "elements": [
+            {"type": "node", "id": 1, "lat": 48.9, "lon": 12.8,
+             "tags": {"military": "bunker", "name": "Bunker B"}},
+            {"type": "node", "id": 2, "lat": 48.9, "lon": 12.8,
+             "tags": {"building": "ruins"}},
+        ]
+    }
+    pois = forest.parse_overpass_pois(data)
+    kinds = {p["kind"] for p in pois}
+    assert kinds == {"lostplace"}
+    subtypes = sorted(p["subtype"] for p in pois)
+    assert subtypes == ["Bunker", "Gebäuderuine"]
+
+
+def test_query_categories_filter():
+    bbox = (48.0, 12.0, 49.0, 13.0)
+    # nur historisch
+    q = forest.build_overpass_query(bbox, categories=["historic"])
+    assert "castle" in q
+    assert "viewpoint" not in q
+    assert "bunker" not in q
+    # nur Lost Places
+    q2 = forest.build_pois_query(bbox, categories=["lostplace"])
+    assert "bunker" in q2
+    assert "viewpoint" not in q2
+    assert "castle" not in q2
+    # Standard (None) = alle Kategorien
+    qall = forest.build_pois_query(bbox)
+    for token in ("viewpoint", "castle", "bunker", "peak"):
+        assert token in qall
+
+
+def test_parse_pois_filters_by_categories():
+    # Ein Element, das historic=tower UND Aussichtsturm ist -> kind 'tower'.
+    data = {
+        "elements": [
+            {"type": "node", "id": 1, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "tower", "man_made": "tower",
+                      "tower:type": "observation", "name": "Alter Turm"}},
+            {"type": "node", "id": 2, "lat": 48.9, "lon": 12.8,
+             "tags": {"historic": "castle", "name": "Burg"}},
+        ]
+    }
+    # Kategorie nur 'historic' -> der als 'tower' klassifizierte fällt raus
+    pois = forest.parse_overpass_pois(data, categories=["historic"])
+    assert [p["kind"] for p in pois] == ["historic"]
+    # ohne Filter sind beide drin
+    assert len(forest.parse_overpass_pois(data)) == 2

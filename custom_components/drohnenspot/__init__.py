@@ -205,6 +205,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 poi_bonus_radius_m=call.data.get(
                     "poi_bonus_radius_m", DEFAULT_POI_BONUS_RADIUS_M
                 ),
+                poi_categories=clients["coordinator"].poi_categories,
             )
         except HomeAssistantError:
             raise
@@ -225,6 +226,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             "latitude": lat,
             "longitude": lon,
             "restricted": restricted,
+            "temporary": "temporaere_betriebseinschraenkungen" in hits,
             "features": summarize_restrictions(hits),
             "elevation_m": round(elevation, 1) if elevation is not None else None,
             "attribution": ATTRIBUTION,
@@ -239,7 +241,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
         dlon = radius_m / (111_195.0 * max(0.01, math.cos(math.radians(lat))))
         bbox = (lat - dlat, lon - dlon, lat + dlat, lon + dlon)
         try:
-            pois = await clients["forest"].fetch_pois(bbox)
+            pois = await clients["forest"].fetch_pois(
+                bbox, clients["coordinator"].poi_categories
+            )
         except Exception as err:  # noqa: BLE001
             raise HomeAssistantError(f"POI-Abfrage fehlgeschlagen: {err}") from err
         return {

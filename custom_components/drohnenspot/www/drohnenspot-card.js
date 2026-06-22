@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b9";
+const CARD_VERSION = "0.1.0b10";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -17,7 +17,6 @@ const OVERLAY_LAYERS = [
   "flughaefen",
   "flugplaetze",
   "militaerische_anlagen",
-  "temporaere_betriebseinschraenkungen",
   "nationalparks",
   "vogelschutzgebiete",
   "ffh-gebiete",
@@ -26,14 +25,22 @@ const OVERLAY_LAYERS = [
   .map((n) => "dipul:" + n)
   .join(",");
 
-// Naturschutzgebiete als eigener, separat schaltbarer Layer.
+// Naturschutzgebiete und temporäre Sperrungen (NOTAM) als eigene Layer.
 const NATURE_LAYERS = "dipul:naturschutzgebiete";
+const NOTAM_LAYERS = "dipul:temporaere_betriebseinschraenkungen";
 
 // Sehenswertes-POIs.
-const POI_EMOJI = { viewpoint: "👀", historic: "🏰", peak: "⛰️", tower: "🗼" };
+const POI_EMOJI = {
+  viewpoint: "👀",
+  historic: "🏰",
+  lostplace: "🏚️",
+  peak: "⛰️",
+  tower: "🗼",
+};
 const POI_LABEL = {
   viewpoint: "Aussichtspunkt",
   historic: "Historischer Ort",
+  lostplace: "Lost Place",
   peak: "Gipfel",
   tower: "Aussichtsturm",
 };
@@ -195,6 +202,7 @@ class DrohnenspotCard extends HTMLElement {
 
     this._dipulLayer = L.tileLayer.wms(DIPUL_WMS, wmsOpts(OVERLAY_LAYERS)).addTo(this._map);
     this._natureLayer = L.tileLayer.wms(DIPUL_WMS, wmsOpts(NATURE_LAYERS)).addTo(this._map);
+    this._notamLayer = L.tileLayer.wms(DIPUL_WMS, wmsOpts(NOTAM_LAYERS)).addTo(this._map);
     // Sehenswertes: leere Ebene, lädt POIs erst beim Einschalten (on-demand).
     this._poiLayer = L.layerGroup();
 
@@ -203,6 +211,7 @@ class DrohnenspotCard extends HTMLElement {
         null,
         {
           "Flugverbotszonen (DIPUL)": this._dipulLayer,
+          "Temporäre Sperrungen (NOTAM)": this._notamLayer,
           Naturschutzgebiete: this._natureLayer,
           Sehenswertes: this._poiLayer,
         },
@@ -264,6 +273,8 @@ class DrohnenspotCard extends HTMLElement {
       const r = (res && res.response) || res || {};
       const feats = r.features || [];
       let html = `<b>${r.restricted ? "🚫 eingeschränkt" : "✅ frei (laut Zonen)"}</b>`;
+      if (r.temporary)
+        html += `<br><b style="color:#d32f2f">⛔ Aktive temporäre Sperrung (NOTAM)</b>`;
       if (r.elevation_m != null) html += `<br>Höhe: ${r.elevation_m} m`;
       html += feats.length ? `<br>${feats.join("<br>")}` : "<br>keine Zonen hier";
       popup.setContent(html);

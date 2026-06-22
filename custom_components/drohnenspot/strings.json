@@ -14,7 +14,8 @@
           "require_road_access": "Nur erreichbare Spots (nahe Straße/Weg)",
           "max_road_distance_m": "Max. Abstand zur Straße/Weg (m)",
           "poi_bonus": "Bonus für Sehenswertes (nahe Aussicht/Burg/Gipfel)",
-          "poi_bonus_radius_m": "Bonus-Radius (m)"
+          "poi_bonus_radius_m": "Bonus-Radius (m)",
+          "poi_categories": "Sehenswertes-Kategorien"
         }
       }
     },
@@ -34,7 +35,8 @@
           "require_road_access": "Nur erreichbare Spots (nahe Straße/Weg)",
           "max_road_distance_m": "Max. Abstand zur Straße/Weg (m)",
           "poi_bonus": "Bonus für Sehenswertes (nahe Aussicht/Burg/Gipfel)",
-          "poi_bonus_radius_m": "Bonus-Radius (m)"
+          "poi_bonus_radius_m": "Bonus-Radius (m)",
+          "poi_categories": "Sehenswertes-Kategorien"
         }
       }
     }

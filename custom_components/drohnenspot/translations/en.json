@@ -14,7 +14,8 @@
           "require_road_access": "Only reachable spots (near road/track)",
           "max_road_distance_m": "Max. distance to road/track (m)",
           "poi_bonus": "Bonus for points of interest (near viewpoint/castle/peak)",
-          "poi_bonus_radius_m": "Bonus radius (m)"
+          "poi_bonus_radius_m": "Bonus radius (m)",
+          "poi_categories": "Points-of-interest categories"
         }
       }
     },
@@ -34,7 +35,8 @@
           "require_road_access": "Only reachable spots (near road/track)",
           "max_road_distance_m": "Max. distance to road/track (m)",
           "poi_bonus": "Bonus for points of interest (near viewpoint/castle/peak)",
-          "poi_bonus_radius_m": "Bonus radius (m)"
+          "poi_bonus_radius_m": "Bonus radius (m)",
+          "poi_categories": "Points-of-interest categories"
         }
       }
     }

@@ -72,6 +72,10 @@ zoom: 11
 radius_km: 12
 count: 8
 height: 480
+# Basiskarte tauschen (optional), Standard ist Esri World Topo:
+# tile_url: https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png
+# tile_subdomains: abc
+# tile_attribution: © OpenTopoMap (CC-BY-SA)
 ```
 
 ## Services
@@ -96,7 +100,7 @@ Liefert eine Antwort mit `spots[]` (Koordinaten, Höhe, Prominenz, Abstand).
 
 - **Geozonen**: © DFS / GeoBasis-DE / BKG — DIPUL-WMS, **CC BY 4.0**.
 - **Höhen**: © OpenTopoData / EU-DEM (Copernicus).
-- **Basiskarte**: © OpenTopoMap (CC-BY-SA), Kartendaten © OpenStreetMap.
+- **Basiskarte**: © Esri (World Topo Map) — frei wählbar über `tile_url` in der Card-Konfiguration.
 - **Code**: [MIT](LICENSE).
 
 ## Bekannte Grenzen (Beta)

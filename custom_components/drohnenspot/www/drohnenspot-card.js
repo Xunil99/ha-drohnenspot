@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b1";
+const CARD_VERSION = "0.1.0b2";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -98,7 +98,7 @@ class DrohnenspotCard extends HTMLElement {
           </div>
           <div class="ds-attr">
             Geozonen © DFS / GeoBasis-DE / BKG (CC&nbsp;BY&nbsp;4.0) ·
-            Höhen © OpenTopoData/EU-DEM · Karte © OpenTopoMap (CC-BY-SA) ·
+            Höhen © OpenTopoData/EU-DEM · Karte © Esri ·
             v${CARD_VERSION}
           </div>
         </div>
@@ -131,10 +131,19 @@ class DrohnenspotCard extends HTMLElement {
 
     this._map = L.map(this._mapEl).setView([lat, lon], zoom);
 
-    L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-      maxZoom: 17,
-      attribution: "© OpenTopoMap (CC-BY-SA) · © OpenStreetMap",
-    }).addTo(this._map);
+    // Basiskarte: standardmäßig Esri World Topo (zuverlässig unter Last,
+    // Relief-/Topo-Look). Über tile_url/tile_attribution frei austauschbar.
+    const tileUrl =
+      this._config.tile_url ||
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}";
+    const tileAttr =
+      this._config.tile_attribution || "Tiles © Esri — Esri, USGS, NOAA";
+    const baseOpts = {
+      maxZoom: this._config.max_zoom || 18,
+      attribution: tileAttr,
+    };
+    if (this._config.tile_subdomains) baseOpts.subdomains = this._config.tile_subdomains;
+    L.tileLayer(tileUrl, baseOpts).addTo(this._map);
 
     this._dipulLayer = L.tileLayer
       .wms(DIPUL_WMS, {

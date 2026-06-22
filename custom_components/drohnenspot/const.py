@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 DOMAIN = "drohnenspot"
-VERSION = "0.1.0b1"
+VERSION = "0.1.0b2"
 
 # Konfigurations-Schlüssel
 CONF_RADIUS_KM = "radius_km"

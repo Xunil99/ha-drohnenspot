@@ -6,7 +6,7 @@ find_spots:
   fields:
     latitude:
       name: Breitengrad
-      description: Mittelpunkt der Suche (Vorgabe: Heimat-Standort).
+      description: Mittelpunkt der Suche, Vorgabe ist der Heimat-Standort.
       required: false
       example: 50.3
       selector:
@@ -17,7 +17,7 @@ find_spots:
           mode: box
     longitude:
       name: Längengrad
-      description: Mittelpunkt der Suche (Vorgabe: Heimat-Standort).
+      description: Mittelpunkt der Suche, Vorgabe ist der Heimat-Standort.
       required: false
       example: 6.5
       selector:

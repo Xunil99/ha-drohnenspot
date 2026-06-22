@@ -4,6 +4,7 @@
   "version": "0.1.0b1",
   "codeowners": ["@Xunil99"],
   "config_flow": true,
+  "dependencies": ["frontend", "http"],
   "documentation": "https://github.com/Xunil99/ha-drohnenspot",
   "issue_tracker": "https://github.com/Xunil99/ha-drohnenspot/issues",
   "integration_type": "service",

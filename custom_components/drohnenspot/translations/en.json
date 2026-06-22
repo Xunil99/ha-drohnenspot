@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Drohnenspot",
+        "description": "Set the centre point and search parameters. Pre-filled with your Home Assistant location.",
+        "data": {
+          "latitude": "Latitude (centre)",
+          "longitude": "Longitude (centre)",
+          "radius_km": "Search radius (km)",
+          "spot_count": "Number of spots",
+          "min_elevation": "Minimum elevation (m)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Drohnenspot is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Drohnenspot settings",
+        "data": {
+          "radius_km": "Search radius (km)",
+          "spot_count": "Number of spots",
+          "min_elevation": "Minimum elevation (m)"
+        }
+      }
+    }
+  }
+}

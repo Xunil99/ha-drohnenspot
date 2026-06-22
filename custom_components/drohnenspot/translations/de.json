@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Drohnenspot einrichten",
+        "description": "Mittelpunkt und Suchparameter festlegen. Vorbelegt mit deinem Home-Assistant-Standort.",
+        "data": {
+          "latitude": "Breitengrad (Mittelpunkt)",
+          "longitude": "Längengrad (Mittelpunkt)",
+          "radius_km": "Suchradius (km)",
+          "spot_count": "Anzahl Spots",
+          "min_elevation": "Mindesthöhe (m)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Drohnenspot ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Drohnenspot-Einstellungen",
+        "data": {
+          "radius_km": "Suchradius (km)",
+          "spot_count": "Anzahl Spots",
+          "min_elevation": "Mindesthöhe (m)"
+        }
+      }
+    }
+  }
+}

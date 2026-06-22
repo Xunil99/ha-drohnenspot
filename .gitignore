@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Virtuelle Umgebungen
+.venv/
+venv/
+env/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Interne Planungs-/Arbeitsdateien (gehören NICHT ins Repo)
+_planung/
+_scratch/
+*.local.md

@@ -1,13 +1,13 @@
 {
   "domain": "drohnenspot",
   "name": "Drohnenspot (DE)",
-  "version": "0.1.0b1",
   "codeowners": ["@Xunil99"],
   "config_flow": true,
   "dependencies": ["frontend", "http"],
   "documentation": "https://github.com/Xunil99/ha-drohnenspot",
-  "issue_tracker": "https://github.com/Xunil99/ha-drohnenspot/issues",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "requirements": []
+  "issue_tracker": "https://github.com/Xunil99/ha-drohnenspot/issues",
+  "requirements": [],
+  "version": "0.1.0b1"
 }

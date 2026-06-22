@@ -22,6 +22,8 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
+          # Brand-Assets/Brands-Repo-Eintrag sind ein v1-Schritt (Beta).
+          ignore: brands
 
   tests:
     name: pytest (Kernlogik)

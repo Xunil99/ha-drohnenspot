@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b2";
+const CARD_VERSION = "0.1.0b3";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -68,6 +68,13 @@ class DrohnenspotCard extends HTMLElement {
     return 9;
   }
 
+  disconnectedCallback() {
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
+  }
+
   async _init() {
     this._renderShell();
     try {
@@ -105,7 +112,11 @@ class DrohnenspotCard extends HTMLElement {
       </ha-card>
       <style>
         .ds-wrap { padding: 0 0 8px; }
-        .ds-map { width: 100%; border-radius: 0; z-index: 0; }
+        .ds-map { width: 100%; border-radius: 0; z-index: 0; overflow: hidden; position: relative; background: #eaeaea; }
+        .ds-pin { background: transparent; border: none; }
+        .ds-pin span { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background: var(--primary-color,#03a9f4); color:#fff; font-weight:700; font-size:13px; box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.4); }
+        .ds-pin-home span { background:#2e7d32; }
+        .ds-pin-best span { background:#f9a825; }
         .ds-bar { display:flex; align-items:center; gap:12px; padding:10px 16px 4px; flex-wrap:wrap; }
         .ds-btn {
           background: var(--primary-color, #03a9f4); color: var(--text-primary-color,#fff);
@@ -160,14 +171,37 @@ class DrohnenspotCard extends HTMLElement {
       .layers(null, { "Flugverbotszonen (DIPUL)": this._dipulLayer }, { collapsed: false })
       .addTo(this._map);
 
-    this._homeMarker = L.marker([lat, lon]).addTo(this._map).bindPopup("Heimat");
+    this._homeMarker = L.marker([lat, lon], { icon: this._pin("🏠", "ds-pin-home") })
+      .addTo(this._map)
+      .bindPopup("Heimat");
     this._spotLayer = L.layerGroup().addTo(this._map);
     this._bestLayer = L.layerGroup().addTo(this._map);
 
     this._map.on("click", (e) => this._onMapClick(e));
 
-    // Layout nach erstem Rendern korrigieren (Karte in versteckten Tabs).
-    setTimeout(() => this._map && this._map.invalidateSize(), 200);
+    // Robuste Größenkorrektur: Leaflet kennt die Container-Größe im
+    // HA-Dashboard (Masonry/Panel/versteckte Tabs) anfangs oft nicht ->
+    // verstreute Kacheln mit Lücken und falsch platzierte Marker.
+    // ResizeObserver + mehrere verzögerte invalidateSize-Aufrufe beheben das.
+    const fixSize = () => {
+      if (this._map) this._map.invalidateSize(false);
+    };
+    if (window.ResizeObserver) {
+      this._resizeObserver = new ResizeObserver(() => fixSize());
+      this._resizeObserver.observe(this._mapEl);
+    }
+    requestAnimationFrame(fixSize);
+    [50, 150, 300, 600, 1000, 2000].forEach((ms) => setTimeout(fixSize, ms));
+  }
+
+  _pin(html, cls) {
+    return this._L.divIcon({
+      className: "ds-pin " + cls,
+      html: `<span>${html}</span>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -14],
+    });
   }
 
   async _callService(service, data) {
@@ -227,7 +261,10 @@ class DrohnenspotCard extends HTMLElement {
     const latlngs = [];
     spots.forEach((s, idx) => {
       const dipul = `https://maps.dipul.de/?lat=${s.latitude}&lng=${s.longitude}`;
-      const marker = L.marker([s.latitude, s.longitude], { title: `Spot ${idx + 1}` });
+      const marker = L.marker([s.latitude, s.longitude], {
+        title: `Spot ${idx + 1}`,
+        icon: this._pin(String(idx + 1), "ds-pin-spot"),
+      });
       marker.bindPopup(
         `<b>Spot ${idx + 1}</b><br>Höhe: ${s.elevation_m} m<br>` +
           `Prominenz: ${s.prominence_m} m<br>Abstand: ${s.distance_km} km<br>` +
@@ -262,7 +299,7 @@ class DrohnenspotCard extends HTMLElement {
     if (sState && sState.attributes && sState.attributes.latitude != null) {
       const a = sState.attributes;
       const L = this._L;
-      L.marker([a.latitude, a.longitude], { opacity: 0.95 })
+      L.marker([a.latitude, a.longitude], { icon: this._pin("⭐", "ds-pin-best") })
         .bindPopup(
           `<b>⭐ Bester Spot</b><br>Höhe: ${sState.state} m<br>` +
             `Abstand: ${a.distance_km ?? "?"} km`

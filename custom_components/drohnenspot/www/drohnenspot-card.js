@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b3";
+const CARD_VERSION = "0.1.0b4";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -91,6 +91,7 @@ class DrohnenspotCard extends HTMLElement {
     const title = this._config.title || "Drohnenspot";
     const height = this._config.height || 480;
     this.innerHTML = `
+      <link rel="stylesheet" href="${LEAFLET_CSS}" />
       <ha-card header="${title}">
         <div class="ds-wrap">
           <div class="ds-map" style="height:${height}px"></div>
@@ -113,6 +114,21 @@ class DrohnenspotCard extends HTMLElement {
       <style>
         .ds-wrap { padding: 0 0 8px; }
         .ds-map { width: 100%; border-radius: 0; z-index: 0; overflow: hidden; position: relative; background: #eaeaea; }
+        /* Kritische Leaflet-Layout-Regeln, scoped — wirken sofort, auch wenn
+           die externe leaflet.css verzögert/blockiert ist (Shadow-DOM-Scope). */
+        .ds-map .leaflet-pane,
+        .ds-map .leaflet-tile,
+        .ds-map .leaflet-marker-icon,
+        .ds-map .leaflet-marker-shadow,
+        .ds-map .leaflet-tile-container,
+        .ds-map .leaflet-image-layer,
+        .ds-map .leaflet-layer { position: absolute; left: 0; top: 0; }
+        .ds-map .leaflet-control-container .leaflet-top,
+        .ds-map .leaflet-control-container .leaflet-bottom { position: absolute; z-index: 1000; }
+        .ds-map .leaflet-top { top: 0; }
+        .ds-map .leaflet-bottom { bottom: 0; }
+        .ds-map .leaflet-left { left: 0; }
+        .ds-map .leaflet-right { right: 0; }
         .ds-pin { background: transparent; border: none; }
         .ds-pin span { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background: var(--primary-color,#03a9f4); color:#fff; font-weight:700; font-size:13px; box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.4); }
         .ds-pin-home span { background:#2e7d32; }

@@ -10,7 +10,9 @@
           "radius_km": "Search radius (km)",
           "spot_count": "Number of spots",
           "min_elevation": "Minimum elevation (m)",
-          "exclude_forest": "Exclude forest spots"
+          "exclude_forest": "Exclude forest spots",
+          "require_road_access": "Only reachable spots (near road/track)",
+          "max_road_distance_m": "Max. distance to road/track (m)"
         }
       }
     },
@@ -26,7 +28,9 @@
           "radius_km": "Search radius (km)",
           "spot_count": "Number of spots",
           "min_elevation": "Minimum elevation (m)",
-          "exclude_forest": "Exclude forest spots"
+          "exclude_forest": "Exclude forest spots",
+          "require_road_access": "Only reachable spots (near road/track)",
+          "max_road_distance_m": "Max. distance to road/track (m)"
         }
       }
     }

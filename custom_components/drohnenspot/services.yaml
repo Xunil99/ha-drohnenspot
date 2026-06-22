@@ -66,3 +66,21 @@ find_spots:
       required: false
       selector:
         boolean:
+    require_road_access:
+      name: Nur erreichbare Spots
+      description: >-
+        Nur Spots nahe einer Straße/einem Feldweg behalten (OpenStreetMap).
+      required: false
+      selector:
+        boolean:
+    max_road_distance_m:
+      name: Max. Abstand zur Straße/Weg (m)
+      description: Höchstabstand zur nächsten Straße/zum Weg für „erreichbar".
+      required: false
+      selector:
+        number:
+          min: 10
+          max: 5000
+          step: 10
+          unit_of_measurement: m
+          mode: box

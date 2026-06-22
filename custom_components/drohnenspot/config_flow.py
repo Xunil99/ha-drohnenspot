@@ -16,12 +16,16 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_EXCLUDE_FOREST,
+    CONF_MAX_ROAD_DISTANCE_M,
     CONF_MIN_ELEVATION,
     CONF_RADIUS_KM,
+    CONF_REQUIRE_ROAD_ACCESS,
     CONF_SPOT_COUNT,
     DEFAULT_EXCLUDE_FOREST,
+    DEFAULT_MAX_ROAD_DISTANCE_M,
     DEFAULT_MIN_ELEVATION,
     DEFAULT_RADIUS_KM,
+    DEFAULT_REQUIRE_ROAD_ACCESS,
     DEFAULT_SPOT_COUNT,
     DOMAIN,
 )
@@ -45,6 +49,18 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_EXCLUDE_FOREST,
                 default=defaults.get(CONF_EXCLUDE_FOREST, DEFAULT_EXCLUDE_FOREST),
             ): bool,
+            vol.Required(
+                CONF_REQUIRE_ROAD_ACCESS,
+                default=defaults.get(
+                    CONF_REQUIRE_ROAD_ACCESS, DEFAULT_REQUIRE_ROAD_ACCESS
+                ),
+            ): bool,
+            vol.Required(
+                CONF_MAX_ROAD_DISTANCE_M,
+                default=defaults.get(
+                    CONF_MAX_ROAD_DISTANCE_M, DEFAULT_MAX_ROAD_DISTANCE_M
+                ),
+            ): vol.All(vol.Coerce(int), vol.Range(min=10, max=5000)),
         }
     )
 
@@ -83,6 +99,12 @@ class DrohnenspotConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     CONF_EXCLUDE_FOREST, default=DEFAULT_EXCLUDE_FOREST
                 ): bool,
+                vol.Required(
+                    CONF_REQUIRE_ROAD_ACCESS, default=DEFAULT_REQUIRE_ROAD_ACCESS
+                ): bool,
+                vol.Required(
+                    CONF_MAX_ROAD_DISTANCE_M, default=DEFAULT_MAX_ROAD_DISTANCE_M
+                ): vol.All(vol.Coerce(int), vol.Range(min=10, max=5000)),
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema)

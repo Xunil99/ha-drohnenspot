@@ -13,7 +13,7 @@ import math
 from typing import Any
 
 from .const import ATTRIBUTION
-from .forest import point_in_forest
+from .forest import near_road, nearest_road_distance_m, point_in_forest
 from .spotfinder import Candidate, adaptive_spacing, build_grid, rank_candidates
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,6 +51,8 @@ async def async_find_spots(
     restriction_layers: list[str] | None = None,
     forest: Any = None,
     exclude_forest: bool = True,
+    require_road_access: bool = True,
+    max_road_distance_m: float = 200.0,
 ) -> dict[str, Any]:
     """Beste legale, hoch gelegene Spots im Umkreis finden."""
     spacing = adaptive_spacing(radius_m)
@@ -62,16 +64,29 @@ async def async_find_spots(
     over = max(count * 4, count + 8)
     candidates = rank_candidates(grid, top_k=over, min_elevation=min_elevation)
 
+    # Wald UND Wege in EINER Overpass-Abfrage holen (best-effort).
+    osm: dict[str, list] = {"forest": [], "roads": []}
+    if forest is not None and (exclude_forest or require_road_access):
+        osm = await forest.fetch_osm(_bbox(lat, lon, radius_m))
+    roads = osm["roads"]
+
     # Wald-Spots vorab lokal aussortieren (spart spätere DIPUL-Abfragen).
     forest_excluded = 0
-    if exclude_forest and forest is not None:
-        polygons = await forest.fetch_polygons(_bbox(lat, lon, radius_m))
-        if polygons:
-            before = len(candidates)
-            candidates = [
-                c for c in candidates if not point_in_forest(c.lat, c.lon, polygons)
-            ]
-            forest_excluded = before - len(candidates)
+    if exclude_forest and osm["forest"]:
+        before = len(candidates)
+        candidates = [
+            c for c in candidates if not point_in_forest(c.lat, c.lon, osm["forest"])
+        ]
+        forest_excluded = before - len(candidates)
+
+    # Schlecht erreichbare Spots (zu weit von Straße/Weg) aussortieren.
+    road_excluded = 0
+    if require_road_access and roads:
+        before = len(candidates)
+        candidates = [
+            c for c in candidates if near_road(c.lat, c.lon, roads, max_road_distance_m)
+        ]
+        road_excluded = before - len(candidates)
 
     sem = asyncio.Semaphore(_ZONE_CHECK_CONCURRENCY)
 
@@ -97,12 +112,23 @@ async def async_find_spots(
     clear.sort(key=lambda c: (c.prominence, c.elevation), reverse=True)
     spots = clear[:count]
 
+    spots_out = []
+    for c in spots:
+        item = _serialize(c)
+        if roads:
+            d = nearest_road_distance_m(c.lat, c.lon, roads)
+            item["road_distance_m"] = round(d) if d != float("inf") else None
+        else:
+            item["road_distance_m"] = None
+        spots_out.append(item)
+
     return {
-        "spots": [_serialize(c) for c in spots],
+        "spots": spots_out,
         "found": len(spots),
         "candidates_evaluated": len(candidates),
         "zones_checked": len(valid),
         "forest_excluded": forest_excluded,
+        "road_excluded": road_excluded,
         "center": {"latitude": round(lat, 6), "longitude": round(lon, 6)},
         "radius_km": round(radius_m / 1000, 1),
         "attribution": ATTRIBUTION,

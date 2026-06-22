@@ -16,12 +16,16 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_EXCLUDE_FOREST,
+    CONF_MAX_ROAD_DISTANCE_M,
     CONF_MIN_ELEVATION,
     CONF_RADIUS_KM,
+    CONF_REQUIRE_ROAD_ACCESS,
     CONF_SPOT_COUNT,
     DEFAULT_EXCLUDE_FOREST,
+    DEFAULT_MAX_ROAD_DISTANCE_M,
     DEFAULT_MIN_ELEVATION,
     DEFAULT_RADIUS_KM,
+    DEFAULT_REQUIRE_ROAD_ACCESS,
     DEFAULT_SPOT_COUNT,
     DOMAIN,
     UPDATE_INTERVAL_HOURS,
@@ -98,6 +102,12 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 forest=self.forest,
                 exclude_forest=bool(
                     self._opt(CONF_EXCLUDE_FOREST, DEFAULT_EXCLUDE_FOREST)
+                ),
+                require_road_access=bool(
+                    self._opt(CONF_REQUIRE_ROAD_ACCESS, DEFAULT_REQUIRE_ROAD_ACCESS)
+                ),
+                max_road_distance_m=float(
+                    self._opt(CONF_MAX_ROAD_DISTANCE_M, DEFAULT_MAX_ROAD_DISTANCE_M)
                 ),
             )
             spots = result.get("spots") or []

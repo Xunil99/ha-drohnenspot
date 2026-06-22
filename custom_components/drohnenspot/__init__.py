@@ -33,7 +33,9 @@ from .const import (
     CONF_RADIUS_KM,
     DEFAULT_ELEVATION_DATASET,
     DEFAULT_EXCLUDE_FOREST,
+    DEFAULT_MAX_ROAD_DISTANCE_M,
     DEFAULT_RADIUS_KM,
+    DEFAULT_REQUIRE_ROAD_ACCESS,
     DEFAULT_SPOT_COUNT,
     DOMAIN,
     SERVICE_FIND_SPOTS,
@@ -67,6 +69,10 @@ FIND_SPOTS_SCHEMA = vol.Schema(
         ),
         vol.Optional("min_elevation"): vol.All(vol.Coerce(float), vol.Range(min=0)),
         vol.Optional("exclude_forest"): cv.boolean,
+        vol.Optional("require_road_access"): cv.boolean,
+        vol.Optional("max_road_distance_m"): vol.All(
+            vol.Coerce(float), vol.Range(min=10, max=5000)
+        ),
     }
 )
 
@@ -171,6 +177,12 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 min_elevation=call.data.get("min_elevation"),
                 forest=clients["forest"],
                 exclude_forest=call.data.get("exclude_forest", DEFAULT_EXCLUDE_FOREST),
+                require_road_access=call.data.get(
+                    "require_road_access", DEFAULT_REQUIRE_ROAD_ACCESS
+                ),
+                max_road_distance_m=call.data.get(
+                    "max_road_distance_m", DEFAULT_MAX_ROAD_DISTANCE_M
+                ),
             )
         except HomeAssistantError:
             raise

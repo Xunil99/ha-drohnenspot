@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b5";
+const CARD_VERSION = "0.1.0b6";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -291,9 +291,11 @@ class DrohnenspotCard extends HTMLElement {
         title: `Spot ${idx + 1}`,
         icon: this._pin(String(idx + 1), "ds-pin-spot"),
       });
+      const weg = s.road_distance_m != null ? `Weg: ${s.road_distance_m} m<br>` : "";
       marker.bindPopup(
         `<b>Spot ${idx + 1}</b><br>Höhe: ${s.elevation_m} m<br>` +
           `Prominenz: ${s.prominence_m} m<br>Abstand: ${s.distance_km} km<br>` +
+          weg +
           `<a href="${dipul}" target="_blank" rel="noopener">DIPUL-Check ↗</a>`
       );
       marker.addTo(this._spotLayer);

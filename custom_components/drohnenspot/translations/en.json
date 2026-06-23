@@ -15,7 +15,8 @@
           "max_road_distance_m": "Max. distance to road/track (m)",
           "poi_bonus": "Bonus for points of interest (near viewpoint/castle/peak)",
           "poi_bonus_radius_m": "Bonus radius (m)",
-          "poi_categories": "Points-of-interest categories"
+          "poi_categories": "Points-of-interest categories",
+          "min_clearance_m": "Min. clearance to residential/nature (m, 0 = off)"
         }
       }
     },
@@ -36,7 +37,8 @@
           "max_road_distance_m": "Max. distance to road/track (m)",
           "poi_bonus": "Bonus for points of interest (near viewpoint/castle/peak)",
           "poi_bonus_radius_m": "Bonus radius (m)",
-          "poi_categories": "Points-of-interest categories"
+          "poi_categories": "Points-of-interest categories",
+          "min_clearance_m": "Min. clearance to residential/nature (m, 0 = off)"
         }
       }
     }

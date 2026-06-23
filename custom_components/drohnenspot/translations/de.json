@@ -15,7 +15,8 @@
           "max_road_distance_m": "Max. Abstand zur Straße/Weg (m)",
           "poi_bonus": "Bonus für Sehenswertes (nahe Aussicht/Burg/Gipfel)",
           "poi_bonus_radius_m": "Bonus-Radius (m)",
-          "poi_categories": "Sehenswertes-Kategorien"
+          "poi_categories": "Sehenswertes-Kategorien",
+          "min_clearance_m": "Mindest-Freiraum bis Wohngebiet/Naturschutz (m, 0 = aus)"
         }
       }
     },
@@ -36,7 +37,8 @@
           "max_road_distance_m": "Max. Abstand zur Straße/Weg (m)",
           "poi_bonus": "Bonus für Sehenswertes (nahe Aussicht/Burg/Gipfel)",
           "poi_bonus_radius_m": "Bonus-Radius (m)",
-          "poi_categories": "Sehenswertes-Kategorien"
+          "poi_categories": "Sehenswertes-Kategorien",
+          "min_clearance_m": "Mindest-Freiraum bis Wohngebiet/Naturschutz (m, 0 = aus)"
         }
       }
     }

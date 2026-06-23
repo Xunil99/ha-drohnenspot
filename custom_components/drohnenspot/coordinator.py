@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     CONF_EXCLUDE_FOREST,
     CONF_MAX_ROAD_DISTANCE_M,
+    CONF_MIN_CLEARANCE_M,
     CONF_MIN_ELEVATION,
     CONF_POI_BONUS,
     CONF_POI_BONUS_RADIUS_M,
@@ -26,6 +27,7 @@ from .const import (
     CONF_SPOT_COUNT,
     DEFAULT_EXCLUDE_FOREST,
     DEFAULT_MAX_ROAD_DISTANCE_M,
+    DEFAULT_MIN_CLEARANCE_M,
     DEFAULT_MIN_ELEVATION,
     DEFAULT_POI_BONUS,
     DEFAULT_POI_BONUS_RADIUS_M,
@@ -81,6 +83,10 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def poi_categories(self) -> list[str]:
         return self._opt(CONF_POI_CATEGORIES, DEFAULT_POI_CATEGORIES)
 
+    @property
+    def min_clearance_m(self) -> float:
+        return float(self._opt(CONF_MIN_CLEARANCE_M, DEFAULT_MIN_CLEARANCE_M))
+
     async def _async_update_data(self) -> dict[str, Any]:
         lat, lon = self.latitude, self.longitude
         try:
@@ -124,6 +130,7 @@ class DrohnenspotCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._opt(CONF_POI_BONUS_RADIUS_M, DEFAULT_POI_BONUS_RADIUS_M)
                 ),
                 poi_categories=self.poi_categories,
+                min_clearance_m=self.min_clearance_m,
             )
             spots = result.get("spots") or []
             if spots:

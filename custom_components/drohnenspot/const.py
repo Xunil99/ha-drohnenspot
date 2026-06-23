@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 DOMAIN = "drohnenspot"
-VERSION = "0.1.0b11"
+VERSION = "0.1.0b12"
 
 # Konfigurations-Schlüssel
 CONF_RADIUS_KM = "radius_km"
@@ -15,6 +15,7 @@ CONF_MAX_ROAD_DISTANCE_M = "max_road_distance_m"
 CONF_POI_BONUS = "poi_bonus"
 CONF_POI_BONUS_RADIUS_M = "poi_bonus_radius_m"
 CONF_POI_CATEGORIES = "poi_categories"
+CONF_MIN_CLEARANCE_M = "min_clearance_m"
 
 # Verfügbare Sehenswertes-Kategorien (Schlüssel = Kategorie, Wert = Label).
 POI_CATEGORY_OPTIONS = {
@@ -36,6 +37,7 @@ DEFAULT_MAX_ROAD_DISTANCE_M = 200
 DEFAULT_POI_BONUS = True
 DEFAULT_POI_BONUS_RADIUS_M = 500
 DEFAULT_POI_CATEGORIES = list(POI_CATEGORY_OPTIONS)
+DEFAULT_MIN_CLEARANCE_M = 500
 UPDATE_INTERVAL_HOURS = 6
 
 # Frontend

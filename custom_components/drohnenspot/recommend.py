@@ -14,6 +14,7 @@ from typing import Any
 
 from .const import ATTRIBUTION
 from .forest import (
+    distance_to_polygons_m,
     near_road,
     nearest_poi,
     nearest_road_distance_m,
@@ -24,6 +25,7 @@ from .spotfinder import Candidate, adaptive_spacing, build_grid, rank_candidates
 _LOGGER = logging.getLogger(__name__)
 
 _ZONE_CHECK_CONCURRENCY = 4  # schonend gegenüber DIPUL
+_CLEARANCE_MARGIN_M = 2000.0  # OSM-Bbox-Erweiterung für den Freiraum
 
 
 def _bbox(lat: float, lon: float, radius_m: float) -> tuple[float, float, float, float]:
@@ -61,6 +63,7 @@ async def async_find_spots(
     poi_bonus: bool = True,
     poi_bonus_radius_m: float = 500.0,
     poi_categories: list[str] | None = None,
+    min_clearance_m: float = 0.0,
 ) -> dict[str, Any]:
     """Beste legale, hoch gelegene Spots im Umkreis finden."""
     spacing = adaptive_spacing(radius_m)
@@ -73,10 +76,16 @@ async def async_find_spots(
     candidates = rank_candidates(grid, top_k=over, min_elevation=min_elevation)
 
     # Wald, Wege UND Sehenswertes in EINER Overpass-Abfrage holen (best-effort).
-    osm: dict[str, list] = {"forest": [], "roads": [], "pois": []}
-    if forest is not None and (exclude_forest or require_road_access or poi_bonus):
-        osm = await forest.fetch_osm(_bbox(lat, lon, radius_m), poi_categories)
+    osm: dict[str, list] = {"forest": [], "roads": [], "pois": [], "avoid": []}
+    if forest is not None and (
+        exclude_forest or require_road_access or poi_bonus or min_clearance_m
+    ):
+        # Bbox erweitern, damit Wohngebiete/Naturschutz knapp außerhalb mitzählen.
+        osm = await forest.fetch_osm(
+            _bbox(lat, lon, radius_m + _CLEARANCE_MARGIN_M), poi_categories
+        )
     roads = osm["roads"]
+    avoid = osm.get("avoid", [])
 
     # Wald-Spots vorab lokal aussortieren (spart spätere DIPUL-Abfragen).
     forest_excluded = 0
@@ -117,8 +126,18 @@ async def async_find_spots(
 
     clear = [c for c in valid if not c.restricted]
 
-    # Sehenswertes-POI je Kandidat bestimmen (für Bonus + Anzeige).
+    # Freiraum-Filter: nur Spots mit genug Abstand zu Wohngebiet/Naturschutz.
+    if min_clearance_m and avoid:
+        clear = [
+            c
+            for c in clear
+            if distance_to_polygons_m(c.lat, c.lon, avoid) >= min_clearance_m
+        ]
+
+    # Sehenswertes-POI je Kandidat — nur fliegbare POIs (nicht in Wohn-/Schutzzone).
     pois = osm["pois"] if poi_bonus else []
+    if pois and avoid:
+        pois = [p for p in pois if not point_in_forest(p["lat"], p["lon"], avoid)]
     enriched = []
     for c in clear:
         poi, dist = nearest_poi(c.lat, c.lon, pois) if pois else (None, float("inf"))
@@ -140,6 +159,11 @@ async def async_find_spots(
             item["road_distance_m"] = round(d) if d != float("inf") else None
         else:
             item["road_distance_m"] = None
+        if avoid:
+            cl = distance_to_polygons_m(c.lat, c.lon, avoid)
+            item["clearance_m"] = round(cl) if cl != float("inf") else None
+        else:
+            item["clearance_m"] = None
         if poi is not None and dist != float("inf"):
             item["poi"] = {
                 "kind": poi["kind"],

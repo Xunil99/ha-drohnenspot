@@ -34,8 +34,9 @@ Bewegungsfreiheit, ohne in eine Verbotszone zu geraten.
     mit **Wikipedia-Link** im Popup; Kategorien in den Optionen filterbar)
 - 👆 **Tippen auf die Karte** zeigt Zonen + Geländehöhe an der Stelle.
 - 🔎 **Spot-Empfehlung** mit Filter-Stack: **legal** (DIPUL-Zonen) · **kein
-  Wald** · **erreichbar** (nahe Straße/Feldweg) · optional **Mindesthöhe** ·
-  sortiert nach **Prominenz** · **starker Bonus** für Nähe zu Sehenswertem.
+  Wald** · **erreichbar** (nahe Straße/Feldweg) · **Freiraum** (Mindestabstand
+  zu Wohngebiet/Naturschutz) · optional **Mindesthöhe** · sortiert nach
+  **Prominenz** · **starker Bonus** für Nähe zu (fliegbarem) Sehenswertem.
 - 📟 **Entities**: `binary_sensor` *Heimat in Verbotszone?* · `sensor` *Höhe
   Heimat* · `sensor` *Bester Spot in der Nähe* (Koordinaten als Attribute).
 - ⚙️ **Services** (alle mit Service-Antwort): `drohnenspot.find_spots`,
@@ -83,6 +84,7 @@ Unter *Einstellungen → Geräte & Dienste → Drohnenspot → Konfigurieren*:
 | Bonus für Sehenswertes | an | Spots nahe Aussicht/Burg/Gipfel bevorzugen |
 | Bonus-Radius (m) | 500 | Bis hierhin gilt ein Spot als „nahe Sehenswertem" |
 | Sehenswertes-Kategorien | alle | Welche Arten gezeigt/bewertet werden (Aussichtspunkte, Historische Orte, Lost Places, Gipfel, Aussichtstürme) |
+| Mindest-Freiraum (m) | 500 | Spot muss so weit von Wohngebiet/Naturschutz entfernt sein (0 = aus; höher = freier fliegen) |
 
 ## Karte einrichten
 

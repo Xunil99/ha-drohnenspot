@@ -5,7 +5,7 @@
  *
  * Orientierungshilfe, keine Rechtsgarantie.
  */
-const CARD_VERSION = "0.1.0b11";
+const CARD_VERSION = "0.1.0b12";
 const DIPUL_WMS = "https://uas-betrieb.de/geoservices/dipul/wms";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -324,6 +324,14 @@ class DrohnenspotCard extends HTMLElement {
         icon: this._pin(String(idx + 1), "ds-pin-spot"),
       });
       const weg = s.road_distance_m != null ? `Weg: ${s.road_distance_m} m<br>` : "";
+      const frei =
+        s.clearance_m != null
+          ? `Freiraum: ${
+              s.clearance_m >= 1000
+                ? (s.clearance_m / 1000).toFixed(1) + " km"
+                : s.clearance_m + " m"
+            }<br>`
+          : "";
       let poiTxt = "";
       if (s.poi) {
         const pn =
@@ -337,6 +345,7 @@ class DrohnenspotCard extends HTMLElement {
         `<b>Spot ${idx + 1}</b><br>Höhe: ${s.elevation_m} m<br>` +
           `Prominenz: ${s.prominence_m} m<br>Abstand: ${s.distance_km} km<br>` +
           weg +
+          frei +
           poiTxt +
           `<a href="${dipul}" target="_blank" rel="noopener">DIPUL-Check ↗</a>`
       );

@@ -206,6 +206,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                     "poi_bonus_radius_m", DEFAULT_POI_BONUS_RADIUS_M
                 ),
                 poi_categories=clients["coordinator"].poi_categories,
+                min_clearance_m=clients["coordinator"].min_clearance_m,
             )
         except HomeAssistantError:
             raise

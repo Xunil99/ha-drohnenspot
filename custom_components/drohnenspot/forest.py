@@ -116,6 +116,10 @@ def build_overpass_query(
         f'relation["landuse"="forest"]({b});'
         f'relation["natural"="wood"]({b});'
         f'way["highway"]({b});'
+        f'way["landuse"="residential"]({b});'
+        f'relation["landuse"="residential"]({b});'
+        f'way["leisure"="nature_reserve"]({b});'
+        f'relation["leisure"="nature_reserve"]({b});'
         + _poi_query_parts(b, categories)
         + ");"
         "out geom;"
@@ -165,6 +169,60 @@ def parse_overpass_forest(data: dict[str, Any]) -> list[list[tuple[float, float]
             if len(ring) >= 3:
                 polys.append(ring)
     return polys
+
+
+def _is_avoid_zone(tags: dict[str, Any]) -> bool:
+    # Nur Wohngebiete + echte Naturschutzgebiete (nicht Naturpark/Landschaftsschutz).
+    return (
+        tags.get("landuse") == "residential"
+        or tags.get("leisure") == "nature_reserve"
+    )
+
+
+def parse_overpass_avoid_zones(
+    data: dict[str, Any],
+) -> list[list[tuple[float, float]]]:
+    """Wohngebiete + Naturschutz als Polygone (zum Meiden / als Abstandsmaß)."""
+    polys: list[list[tuple[float, float]]] = []
+    for el in (data or {}).get("elements", []):
+        if not _is_avoid_zone(el.get("tags", {})):
+            continue
+        geom = el.get("geometry")
+        if geom:
+            ring = [(p["lat"], p["lon"]) for p in geom if "lat" in p and "lon" in p]
+            if len(ring) >= 3:
+                polys.append(ring)
+        for member in el.get("members", []) or []:
+            if member.get("role") not in ("outer", "", None):
+                continue
+            mgeom = member.get("geometry")
+            if not mgeom:
+                continue
+            ring = [(p["lat"], p["lon"]) for p in mgeom if "lat" in p and "lon" in p]
+            if len(ring) >= 3:
+                polys.append(ring)
+    return polys
+
+
+def distance_to_polygons_m(
+    lat: float,
+    lon: float,
+    polygons: Iterable[Iterable[tuple[float, float]]],
+) -> float:
+    """Abstand (m) zur nächsten Polygon-Fläche; 0 wenn drin, ``inf`` wenn keine."""
+    polys = list(polygons)
+    if not polys:
+        return float("inf")
+    if point_in_forest(lat, lon, polys):
+        return 0.0
+    best = float("inf")
+    for ring in polys:
+        pts = list(ring)
+        for i in range(len(pts) - 1):
+            d = distance_point_to_segment_m(lat, lon, pts[i], pts[i + 1])
+            if d < best:
+                best = d
+    return best
 
 
 def parse_overpass_roads(data: dict[str, Any]) -> list[list[tuple[float, float]]]:
@@ -422,11 +480,12 @@ class ForestClient:
                 data = await resp.json()
         except Exception as err:  # noqa: BLE001 — best-effort
             _LOGGER.warning("Overpass/OSM-Abfrage fehlgeschlagen: %s", err)
-            return {"forest": [], "roads": [], "pois": []}
+            return {"forest": [], "roads": [], "pois": [], "avoid": []}
         return {
             "forest": parse_overpass_forest(data),
             "roads": parse_overpass_roads(data),
             "pois": parse_overpass_pois(data, categories),
+            "avoid": parse_overpass_avoid_zones(data),
         }
 
     async def fetch_pois(

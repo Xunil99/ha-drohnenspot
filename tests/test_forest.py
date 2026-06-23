@@ -396,6 +396,38 @@ def test_query_categories_filter():
         assert token in qall
 
 
+def test_parse_avoid_zones_residential_and_nature():
+    data = {
+        "elements": [
+            {"type": "way", "id": 1, "tags": {"landuse": "residential"},
+             "geometry": [{"lat": 50.0, "lon": 6.0}, {"lat": 50.0, "lon": 7.0},
+                          {"lat": 51.0, "lon": 7.0}, {"lat": 51.0, "lon": 6.0}]},
+            {"type": "way", "id": 2, "tags": {"leisure": "nature_reserve"},
+             "geometry": [{"lat": 48.0, "lon": 10.0}, {"lat": 48.0, "lon": 10.5},
+                          {"lat": 48.5, "lon": 10.5}, {"lat": 48.5, "lon": 10.0}]},
+            {"type": "way", "id": 3, "tags": {"landuse": "forest"},
+             "geometry": [{"lat": 49.0, "lon": 8.0}, {"lat": 49.0, "lon": 8.1},
+                          {"lat": 49.1, "lon": 8.1}]},  # Wald -> KEINE Avoid-Zone
+        ]
+    }
+    polys = forest.parse_overpass_avoid_zones(data)
+    assert len(polys) == 2
+
+
+def test_distance_to_polygons_inside_is_zero():
+    assert forest.distance_to_polygons_m(50.5, 6.5, [SQUARE]) == 0.0
+
+
+def test_distance_to_polygons_outside():
+    # Punkt ~1° nördlich der Oberkante (lat 51) -> ~111 km
+    d = forest.distance_to_polygons_m(52.0, 6.5, [SQUARE])
+    assert d == pytest.approx(111195.0, rel=0.05)
+
+
+def test_distance_to_polygons_empty_is_inf():
+    assert forest.distance_to_polygons_m(50.5, 6.5, []) == float("inf")
+
+
 def test_parse_pois_filters_by_categories():
     # Ein Element, das historic=tower UND Aussichtsturm ist -> kind 'tower'.
     data = {
